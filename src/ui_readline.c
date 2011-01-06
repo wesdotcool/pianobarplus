@@ -90,11 +90,14 @@ size_t BarReadline (char *buf, const size_t bufSize, const char *mask,
 		} else if (input->fds[1] != -1 && FD_ISSET(input->fds[1], &set)) {
 			curFd = input->fds[1];
 		}
-		/* only check for stdin, fifo is "reopened" as soon as another writer
-		 * is available */
-		if (read (curFd, &chr, sizeof (chr)) <= 0 && curFd == STDIN_FILENO) {
-			/* select() is going wild if fdset contains EOFed fd's */
-			FD_CLR (curFd, &input->set);
+		if (read (curFd, &chr, sizeof (chr)) <= 0) {
+			/* select() is going wild if fdset contains EOFed stdin, only check
+			 * for stdin, fifo is "reopened" as soon as another writer is
+			 * available
+			 * FIXME: ugly */
+			if (curFd == STDIN_FILENO) {
+				FD_CLR (curFd, &input->set);
+			}
 			continue;
 		}
 		switch (chr) {

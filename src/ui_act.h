@@ -26,7 +26,7 @@ THE SOFTWARE.
 
 #include "main.h"
 
-#define BarUiActCallback(name) void name (BarApp_t *app, FILE *curFd)
+#define BarUiActCallback(name) void name (BarApp_t *app)
 
 BarUiActCallback(BarUiActHelp);
 BarUiActCallback(BarUiActAddMusic);

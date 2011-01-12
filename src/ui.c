@@ -297,6 +297,9 @@ PianoStation_t **BarSortedStations (PianoStation_t *unsortedStations,
 
 /*	let user pick one station
  *	@param piano handle
+ *	@param prompt string
+ *	@param station list sort order
+ *	@param input fds
  *	@return pointer to selected station or NULL
  */
 PianoStation_t *BarUiSelectStation (PianoHandle_t *ph, const char *prompt,
@@ -337,6 +340,7 @@ PianoStation_t *BarUiSelectStation (PianoHandle_t *ph, const char *prompt,
 /*	let user pick one song
  *	@param pianobar settings
  *	@param song list
+ *	@param input fds
  *	@return pointer to selected item in song list or NULL
  */
 PianoSong_t *BarUiSelectSong (const BarSettings_t *settings,
@@ -362,6 +366,7 @@ PianoSong_t *BarUiSelectSong (const BarSettings_t *settings,
 
 /*	let user pick one artist
  *	@param artists (linked list)
+ *	@param input fds
  *	@return pointer to selected artist or NULL on abort
  */
 PianoArtist_t *BarUiSelectArtist (PianoArtist_t *startArtist,
@@ -389,7 +394,7 @@ PianoArtist_t *BarUiSelectArtist (PianoArtist_t *startArtist,
 }
 
 /*	search music: query, search request, return music id
- *	@param piano handle
+ *	@param app handle
  *	@param allow seed suggestions if != NULL
  *	@return musicId or NULL on abort/error
  */
@@ -474,7 +479,7 @@ char *BarUiSelectMusicId (BarApp_t *app, char *similarToId) {
 }
 
 /*	browse genre stations and create shared station
- *	@param piano handle
+ *	@param app handle
  */
 void BarStationFromGenre (BarApp_t *app) {
 	PianoReturn_t pRet;

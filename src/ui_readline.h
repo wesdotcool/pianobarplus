@@ -40,7 +40,7 @@ typedef struct {
 } BarReadlineFds_t;
 
 size_t BarReadline (char *, const size_t, const char *,
-		BarReadlineFds_t *, const BarReadlineFlags_t);
+		BarReadlineFds_t *, const BarReadlineFlags_t, int);
 size_t BarReadlineStr (char *, const size_t,
 		BarReadlineFds_t *, const BarReadlineFlags_t);
 size_t BarReadlineInt (int *, BarReadlineFds_t *);

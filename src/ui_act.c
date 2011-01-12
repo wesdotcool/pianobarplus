@@ -192,7 +192,7 @@ BarUiActCallback(BarUiActAddSharedStation) {
 
 	BarUiMsg (MSG_QUESTION, "Station id: ");
 	if (BarReadline (stationId, sizeof (stationId), "0123456789", &app->input,
-			BAR_RL_DEFAULT) > 0) {
+			BAR_RL_DEFAULT, -1) > 0) {
 		reqData.id = stationId;
 		reqData.type = "sh";
 		BarUiMsg (MSG_INFO, "Adding shared station... ");
@@ -488,7 +488,7 @@ BarUiActCallback(BarUiActHistory) {
 					app->settings.keys[BAR_KS_BAN],
 					app->settings.keys[BAR_KS_TIRED]);
 			BarReadline (selectBuf, sizeof (selectBuf), allowedBuf,
-					&app->input, BAR_RL_FULLRETURN);
+					&app->input, BAR_RL_FULLRETURN, -1);
 
 			if (selectBuf[0] == app->settings.keys[BAR_KS_LOVE] ||
 					selectBuf[0] == app->settings.keys[BAR_KS_BAN] ||
@@ -559,7 +559,7 @@ BarUiActCallback(BarUiActBookmark) {
 
 	BarUiMsg (MSG_QUESTION, "Bookmark [s]ong or [a]rtist? ");
 	BarReadline (selectBuf, sizeof (selectBuf), "sa", &app->input,
-			BAR_RL_FULLRETURN);
+			BAR_RL_FULLRETURN, -1);
 	if (selectBuf[0] == 's') {
 		BarUiMsg (MSG_INFO, "Bookmarking song... ");
 		BarUiActDefaultPianoCall (PIANO_REQUEST_BOOKMARK_SONG, app->playlist);

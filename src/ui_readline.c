@@ -56,14 +56,18 @@ static inline char BarReadlineIsUtf8Content (char b) {
  *	@param buffer
  *	@param buffer size
  *	@param accept these characters
+ *	@param input fds
+ *	@param flags
+ *	@param timeout (seconds) or -1 (no timeout)
  *	@return number of bytes read from stdin
  */
 size_t BarReadline (char *buf, const size_t bufSize, const char *mask,
-		BarReadlineFds_t *input, const BarReadlineFlags_t flags) {
+		BarReadlineFds_t *input, const BarReadlineFlags_t flags, int timeout) {
 	size_t bufPos = 0;
 	size_t bufLen = 0;
 	unsigned char escapeState = 0;
 	fd_set set;
+	const bool echo = !(flags & BAR_RL_NOECHO);
 
 	assert (buf != NULL);
 	assert (bufSize > 0);
@@ -76,11 +80,16 @@ size_t BarReadline (char *buf, const size_t bufSize, const char *mask,
 	while (1) {
 		int curFd = -1;
 		char chr;
+		struct timeval timeoutstruct;
 
-		/* select modifies set */
+		/* select modifies set and timeout */
 		memcpy (&set, &input->set, sizeof (set));
-		if (select (input->maxfd, &set, NULL, NULL, NULL) < 0) {
-			/* fail */
+		timeoutstruct.tv_sec = timeout;
+		timeoutstruct.tv_usec = 0;
+
+		if (select (input->maxfd, &set, NULL, NULL,
+				(timeout == -1) ? NULL : &timeoutstruct) <= 0) {
+			/* fail or timeout */
 			break;
 		}
 
@@ -103,13 +112,17 @@ size_t BarReadline (char *buf, const size_t bufSize, const char *mask,
 		switch (chr) {
 			/* EOT */
 			case 4:
-				fputs ("\n", stdout);
+				if (echo) {
+					fputs ("\n", stdout);
+				}
 				return bufLen;
 				break;
 
 			/* return */
 			case 10:
-				fputs ("\n", stdout);
+				if (echo) {
+					fputs ("\n", stdout);
+				}
 				return bufLen;
 				break;
 
@@ -140,14 +153,14 @@ size_t BarReadline (char *buf, const size_t bufSize, const char *mask,
 						}
 					}
 					/* move caret back and delete last character */
-					if (!(flags & BAR_RL_NOECHO)) {
+					if (echo) {
 						fputs ("\033[D\033[K", stdout);
 						fflush (stdout);
 					}
 				} else if (bufPos == 0 && buf[bufPos] != '\0') {
 					/* delete char at position 0 but don't move cursor any further */
 					buf[bufPos] = '\0';
-					if (!(flags & BAR_RL_NOECHO)) {
+					if (echo) {
 						fputs ("\033[K", stdout);
 						fflush (stdout);
 					}
@@ -176,19 +189,21 @@ size_t BarReadline (char *buf, const size_t bufSize, const char *mask,
 					buf[bufPos] = chr;
 					++bufPos;
 					++bufLen;
-					if (!(flags & BAR_RL_NOECHO)) {
+					if (echo) {
 						putchar (chr);
 						fflush (stdout);
 					}
 					/* buffer full => return if requested */
-					if ((flags & BAR_RL_FULLRETURN) && bufPos >= bufSize-1) {
-						fputs ("\n", stdout);
+					if (bufPos >= bufSize-1 && (flags & BAR_RL_FULLRETURN)) {
+						if (echo) {
+							fputs ("\n", stdout);
+						}
 						return bufLen;
 					}
 				}
 				break;
-		}
-	}
+		} /* end switch */
+	} /* end while */
 	return 0;
 }
 
@@ -199,7 +214,7 @@ size_t BarReadline (char *buf, const size_t bufSize, const char *mask,
  */
 size_t BarReadlineStr (char *buf, const size_t bufSize,
 		BarReadlineFds_t *input, const BarReadlineFlags_t flags) {
-	return BarReadline (buf, bufSize, NULL, input, flags);
+	return BarReadline (buf, bufSize, NULL, input, flags, -1);
 }
 
 /*	Read int from stdin
@@ -211,7 +226,7 @@ size_t BarReadlineInt (int *ret, BarReadlineFds_t *input) {
 	char buf[16];
 
 	rlRet = BarReadline (buf, sizeof (buf), "0123456789", input,
-			BAR_RL_DEFAULT);
+			BAR_RL_DEFAULT, -1);
 	*ret = atoi ((char *) buf);
 
 	return rlRet;
@@ -222,7 +237,7 @@ size_t BarReadlineInt (int *ret, BarReadlineFds_t *input) {
  */
 bool BarReadlineYesNo (bool def, BarReadlineFds_t *input) {
 	char buf[2];
-	BarReadline (buf, sizeof (buf), "yYnN", input, BAR_RL_DEFAULT);
+	BarReadline (buf, sizeof (buf), "yYnN", input, BAR_RL_FULLRETURN, -1);
 	if (*buf == 'y' || *buf == 'Y' || (def == true && *buf == '\0')) {
 		return true;
 	} else {

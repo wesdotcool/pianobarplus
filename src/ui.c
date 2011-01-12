@@ -437,7 +437,7 @@ char *BarUiSelectMusicId (BarApp_t *app, char *similarToId) {
 			/* songs and artists found */
 			BarUiMsg (MSG_QUESTION, "Is this an [a]rtist or [t]rack name? ");
 			BarReadline (selectBuf, sizeof (selectBuf), "at", &app->input,
-					BAR_RL_FULLRETURN);
+					BAR_RL_FULLRETURN, -1);
 			if (*selectBuf == 'a') {
 				tmpArtist = BarUiSelectArtist (searchResult.artists,
 						&app->input);

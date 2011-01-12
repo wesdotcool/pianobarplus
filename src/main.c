@@ -148,32 +148,11 @@ static void BarMainGetInitialStation (BarApp_t *app) {
 /*	wait for user input
  */
 static void BarMainHandleUserInput (BarApp_t *app) {
-	struct timeval selectTimeout;
-	fd_set readSetCopy;
-
-	/* select modifies its arguments => copy the set */
-	memcpy (&readSetCopy, &app->input.set, sizeof (app->input.set));
-	selectTimeout.tv_sec = 1;
-	selectTimeout.tv_usec = 0;
-
-	/* in the meantime: wait for user actions */
-	if (select (app->input.maxfd, &readSetCopy, NULL, NULL, &selectTimeout) > 0) {
-		int curFd = -1;
-		char buf = '\0';
-
-		if (FD_ISSET(app->input.fds[0], &readSetCopy)) {
-			curFd = app->input.fds[0];
-		} else if (app->input.fds[1] != -1 && FD_ISSET(app->input.fds[1],
-				&readSetCopy)) {
-			curFd = app->input.fds[1];
-		}
-		if (read (curFd, &buf, sizeof (buf)) <= 0) {
-			/* select() is going wild if fdset contains EOFed fd's */
-			FD_CLR (curFd, &app->input.set);
-		}
-
+	char buf[2];
+	if (BarReadline (buf, sizeof (buf), NULL, &app->input,
+			BAR_RL_FULLRETURN | BAR_RL_NOECHO, 1) > 0) {
 		for (size_t i = 0; i < BAR_KS_COUNT; i++) {
-			if (app->settings.keys[i] == buf) {
+			if (app->settings.keys[i] == buf[0]) {
 				static const BarKeyShortcutFunc_t idToF[] = {BarUiActHelp,
 						BarUiActLoveSong, BarUiActBanSong,
 						BarUiActAddMusic, BarUiActCreateStation,
@@ -189,8 +168,8 @@ static void BarMainHandleUserInput (BarApp_t *app) {
 				idToF[i] (app);
 				break;
 			}
-		}
-	}
+		} /* end for */
+	} /* end if */
 }
 
 /*	append current song to history list and move to the next song

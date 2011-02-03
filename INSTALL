@@ -4,6 +4,7 @@ Install
 Dependencies
 ------------
 
+wget
 gmake
 libao				http://www.xiph.org/ao/
 libfaad2			http://www.audiocoding.com/downloads.html

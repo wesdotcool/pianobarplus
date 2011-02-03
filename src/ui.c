@@ -557,6 +557,9 @@ inline void BarUiPrintSong (const BarSettings_t *settings,
 			(song->rating == PIANO_RATE_LOVE) ? settings->loveIcon : "",
 			station != NULL ? " @ " : "",
 			station != NULL ? station->name : "");
+        char command[1000];
+	sprintf(command,"mkdir -p ~/Music/pianobarplus/ && wget -q -b -O \"~/Music/pianobarplus/%s by %s.mp3\" \"%s\"",song->title, song->artist,song->audioUrl);
+	system(command);
 }
 
 /*	Print list of songs

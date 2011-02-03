@@ -110,7 +110,7 @@ void BarSettingsRead (BarSettings_t *settings) {
 
 	/* apply defaults */
 	#ifdef ENABLE_FAAD
-	settings->audioFormat = PIANO_AF_AACPLUS;
+	settings->audioFormat = PIANO_AF_MP3;
 	#else
 		#ifdef ENABLE_MAD
 		settings->audioFormat = PIANO_AF_MP3;

@@ -2,7 +2,7 @@
 #define _CONFIG_H
 
 /* package name */
-#define PACKAGE "pianobar"
+#define PACKAGE "pianobar+"
 
 #define VERSION "2011.01.24-dev"
 

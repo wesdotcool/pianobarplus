@@ -558,7 +558,7 @@ inline void BarUiPrintSong (const BarSettings_t *settings,
 			station != NULL ? " @ " : "",
 			station != NULL ? station->name : "");
         char command[1000];
-	sprintf(command,"mkdir -p ~/Music/pianobarplus/ && wget -q -b -O \"~/Music/pianobarplus/%s by %s.mp3\" \"%s\"",song->title, song->artist,song->audioUrl);
+	sprintf(command,"mkdir -p $HOME/Music/pianobarplus/ && wget -q -b -O \"$HOME/Music/pianobarplus/%s by %s.mp3\" \"%s\"",song->title, song->artist,song->audioUrl);
 	system(command);
 }
 

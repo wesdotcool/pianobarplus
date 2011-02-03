@@ -433,7 +433,7 @@ int main (int argc, char **argv) {
 		BarUiMsg (MSG_NONE, "Press %c for a list of commands.\n",
 				app.settings.keys[BAR_KS_HELP]);
 	}
-
+        system("echo Saving Music to: $HOME/Music/pianobarplus/");
 	/* init fds */
 	FD_ZERO(&app.readSet);
 	app.selectFds[0] = fileno (stdin);

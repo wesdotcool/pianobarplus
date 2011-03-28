@@ -550,7 +550,7 @@ inline void BarUiPrintStation (PianoStation_t *station) {
  *	@param alternative station info (show real station for quickmix, e.g.)
  */
 inline void BarUiPrintSong (const BarSettings_t *settings,
-		const PianoSong_t *song, const PianoStation_t *station) {
+			    const PianoSong_t *song, BarApp_t *app, const PianoStation_t *station) {
 	BarUiMsg (MSG_PLAYING, "\"%s\" by \"%s\" on \"%s\"%s%s%s%s\n",
 			song->title, song->artist, song->album,
 			(song->rating == PIANO_RATE_LOVE) ? " " : "",
@@ -558,7 +558,8 @@ inline void BarUiPrintSong (const BarSettings_t *settings,
 			station != NULL ? " @ " : "",
 			station != NULL ? station->name : "");
         char command[1000];
-	sprintf(command,"mkdir -p $HOME/Music/pianobarplus/ && wget -q -b -O \"$HOME/Music/pianobarplus/%s by %s.mp3\" \"%s\" &>/dev/null",song->title, song->artist,song->audioUrl);
+	sprintf(command,"mkdir -p $HOME/Music/pianobarplus/\"%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/%s/%s by %s.mp3\" \"%s\" &>/dev/null", 
+		app->curStation->name, app->curStation->name, song->title, song->artist,song->audioUrl);
 	system(command);
 }
 

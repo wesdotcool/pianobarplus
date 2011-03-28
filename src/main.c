@@ -257,7 +257,7 @@ static void BarMainGetPlaylist (BarApp_t *app) {
 /*	start new player thread
  */
 static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
-	BarUiPrintSong (&app->settings, app->playlist, app->curStation->isQuickMix ?
+  BarUiPrintSong (&app->settings, app->playlist, app, app->curStation->isQuickMix ?
 			PianoFindStationById (app->ph.stations,
 			app->playlist->stationId) : NULL);
 

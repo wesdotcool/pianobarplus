@@ -43,7 +43,7 @@ PianoArtist_t *BarUiSelectArtist (PianoArtist_t *startArtist, FILE *curFd);
 char *BarUiSelectMusicId (BarApp_t *, FILE *, char *);
 void BarStationFromGenre (BarApp_t *, FILE *);
 void BarUiPrintStation (PianoStation_t *);
-void BarUiPrintSong (const BarSettings_t *, const PianoSong_t *, 
+void BarUiPrintSong (const BarSettings_t *, const PianoSong_t *, BarApp_t *app,
 		const PianoStation_t *);
 size_t BarUiListSongs (const BarSettings_t *, const PianoSong_t *);
 void BarUiStartEventCmd (const BarSettings_t *, const char *,

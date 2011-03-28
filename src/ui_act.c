@@ -257,7 +257,7 @@ BarUiActCallback(BarUiActSongInfo) {
 
 	BarUiPrintStation (app->curStation);
 	/* print real station if quickmix */
-	BarUiPrintSong (&app->settings, app->playlist,
+	BarUiPrintSong (&app->settings, app->playlist, app,
 			app->curStation->isQuickMix ?
 			PianoFindStationById (app->ph.stations, app->playlist->stationId) :
 			NULL);

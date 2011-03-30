@@ -81,6 +81,7 @@ static bool BarMainLoginUser (BarApp_t *app) {
 	PianoReturn_t pRet;
 	WaitressReturn_t wRet;
 	PianoRequestDataLogin_t reqData;
+
 	reqData.user = app->settings.username;
 	reqData.password = app->settings.password;
 	reqData.step = 0;
@@ -260,6 +261,7 @@ static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
   BarUiPrintSong (&app->settings, app->playlist, app, app->curStation->isQuickMix ?
 			PianoFindStationById (app->ph.stations,
 			app->playlist->stationId) : NULL);
+  PlusBarSaveSong(app, app->curStation, app->playlist);
 
 	if (app->playlist->audioUrl == NULL) {
 		BarUiMsg (MSG_ERR, "Invalid song url.\n");

@@ -550,17 +550,40 @@ inline void BarUiPrintStation (PianoStation_t *station) {
  *	@param alternative station info (show real station for quickmix, e.g.)
  */
 inline void BarUiPrintSong (const BarSettings_t *settings,
-			    const PianoSong_t *song, BarApp_t *app, const PianoStation_t *station) {
+			    const PianoSong_t *song, const BarApp_t *app, const PianoStation_t *station) {
 	BarUiMsg (MSG_PLAYING, "\"%s\" by \"%s\" on \"%s\"%s%s%s%s\n",
 			song->title, song->artist, song->album,
 			(song->rating == PIANO_RATE_LOVE) ? " " : "",
 			(song->rating == PIANO_RATE_LOVE) ? settings->loveIcon : "",
 			station != NULL ? " @ " : "",
 			station != NULL ? station->name : "");
-        char command[1000];
-	sprintf(command,"mkdir -p $HOME/Music/pianobarplus/\"%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/%s/%s by %s.mp3\" \"%s\" &>/dev/null", 
-		app->curStation->name, app->curStation->name, song->title, song->artist,song->audioUrl);
-	system(command);
+
+}
+
+/* This will save the song to $HOME/Music/pianobarplus/ARTIST/SONG.mp3 */
+inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station, const PianoSong_t *song) {
+  /* This "find" string and system call checks to see if we already have the song
+     If we do not have the song, we download it. We do nothing otherwise 
+     It currently does not find anything ever and always downloads */
+  char find[200];
+  sprintf(find, "find $HOME/Music/pianobarplus -name \"%s by %s.mp3\" > /dev/null 2> /dev/null", song->title, song->artist);
+  if (!system(find)) {
+    printf("NOW DOWNLOADING THE SONG\n");
+    char downloadCommand[1000];
+    sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null", 
+	    song->artist, song->album, song->artist, song->album, song->title, song->audioUrl);
+    system(downloadCommand);
+
+    char makeStationCommand[200];
+    sprintf(makeStationCommand, "mkdir -p \"$HOME/Music/pianobarplus/stations/%s\" &>/dev/null",
+	    app->curStation->name);
+    system(makeStationCommand);
+
+    char linkCommand[200];
+    sprintf(linkCommand, "ln \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/stations/%s\"",
+	    song->artist, song->album, song->title, app->curStation->name);
+    system(linkCommand);
+  }
 }
 
 /*	Print list of songs

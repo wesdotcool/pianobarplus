@@ -560,11 +560,12 @@ inline void BarUiPrintSong (const BarSettings_t *settings,
 
 }
 
-/* This will save the song to $HOME/Music/pianobarplus/ARTIST/SONG.mp3 */
+/* This will save the song to $HOME/Music/pianobarplus/artists/ARTIST/ALBUM/SONG.mp3 
+   and it will link the song to $HOME/Music/pianobarplus/stations/STATION/SONG.mp3 */
 inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station, const PianoSong_t *song) {
   /* This "find" string and system call checks to see if we already have the song
-     If we do not have the song, we download it. We do nothing otherwise 
-     It currently does not find anything ever and always downloads */
+     If we do not have the song, we download it. We do nothing otherwise.
+     It is currently broken so it will always download the song */
   char find[200];
   sprintf(find, "find $HOME/Music/pianobarplus -name \"%s by %s.mp3\" > /dev/null 2> /dev/null", song->title, song->artist);
   if (!system(find)) {

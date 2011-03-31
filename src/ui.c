@@ -569,7 +569,6 @@ inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station,
   char find[200];
   sprintf(find, "find $HOME/Music/pianobarplus -name \"%s by %s.mp3\" > /dev/null 2> /dev/null", song->title, song->artist);
   if (!system(find)) {
-    printf("NOW DOWNLOADING THE SONG\n");
     char downloadCommand[1000];
     sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null", 
 	    song->artist, song->album, song->artist, song->album, song->title, song->audioUrl);

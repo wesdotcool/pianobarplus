@@ -572,17 +572,18 @@ inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station,
     char downloadCommand[1000];
     sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null", 
 	    song->artist, song->album, song->artist, song->album, song->title, song->audioUrl);
-    system(downloadCommand);
 
     char makeStationCommand[200];
     sprintf(makeStationCommand, "mkdir -p \"$HOME/Music/pianobarplus/stations/%s\" &>/dev/null",
 	    app->curStation->name);
-    system(makeStationCommand);
 
     char linkCommand[200];
     sprintf(linkCommand, "ln \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/stations/%s\"",
 	    song->artist, song->album, song->title, app->curStation->name);
-    system(linkCommand);
+
+    char totalCommand[2000];
+    sprintf(totalCommand, "%s && %s && %s", downloadCommand, makeStationCommand, linkCommand);
+    system(totalCommand);
   }
 }
 

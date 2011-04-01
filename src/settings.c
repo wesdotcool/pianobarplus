@@ -149,6 +149,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->password = strdup (val);
 		} else if(streq("banDelete", key)) {
 		  settings->banDelete = strdup(val);
+		} else if(streq("setFavoriteFormat", key)) {
+		  settings->setFavoriteFormat = strdup(val);
 		} else if (memcmp ("act_", key, 4) == 0) {
 			size_t i;
 			/* keyboard shortcuts */

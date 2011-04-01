@@ -578,7 +578,7 @@ inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station,
 	    app->curStation->name);
 
     char linkCommand[200];
-    sprintf(linkCommand, "ln \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/stations/%s\"",
+    sprintf(linkCommand, "ln -f \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/stations/%s\"",
 	    song->artist, song->album, song->title, app->curStation->name);
 
     char totalCommand[2000];

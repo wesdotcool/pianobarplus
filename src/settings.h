@@ -85,6 +85,7 @@ typedef struct {
 	char *loveIcon;
         char *banIcon;
         char *banDelete;
+        char *setFavoriteFormat;
 } BarSettings_t;
 
 void BarSettingsInit (BarSettings_t *);

@@ -83,7 +83,8 @@ typedef struct {
 	char *autostartStation;
 	char *eventCmd;
 	char *loveIcon;
-	char *banIcon;
+        char *banIcon;
+        char *banDelete;
 } BarSettings_t;
 
 void BarSettingsInit (BarSettings_t *);

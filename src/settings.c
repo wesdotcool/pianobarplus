@@ -83,6 +83,7 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->eventCmd);
 	free (settings->loveIcon);
 	free (settings->banIcon);
+	free(settings->banDelete);
 	memset (settings, 0, sizeof (*settings));
 }
 
@@ -145,6 +146,8 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->username = strdup (val);
 		} else if (streq ("password", key)) {
 			settings->password = strdup (val);
+		} else if(streq("banDelete", key)) {
+		  settings->banDelete = strdup(val);
 		} else if (memcmp ("act_", key, 4) == 0) {
 			size_t i;
 			/* keyboard shortcuts */

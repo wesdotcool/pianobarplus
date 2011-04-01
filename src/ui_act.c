@@ -319,14 +319,14 @@ BarUiActCallback(BarUiActLoveSong) {
 	reqData.song = app->playlist;
 	reqData.rating = PIANO_RATE_LOVE;
 	char loveSongCopy[1000];
-	if((strcmp(app->settings.setFavoriteFormat, "station")) == 0){
+	if(app->settings.setFavoriteFormat && (strcmp(app->settings.setFavoriteFormat, "station")) == 0){
 	sprintf(loveSongCopy, "mkdir -p \"$HOME/Music/pianobarplus/favorites/%s/\" && ln -f \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/favorites/%s/%s.mp3\"",
 		app->curStation->name, 
 		reqData.song->artist, reqData.song->album, reqData.song->title, 
 		app->curStation->name,  reqData.song->title);	  
 	}
 	else{
-	sprintf(loveSongCopy, "mkdir -p \"$HOME/Music/pianobarplus/favorites/%s/%s/\" && ln -f \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\"; fi\"$HOME/Music/pianobarplus/favorites/%s/%s/%s.mp3\"",
+	sprintf(loveSongCopy, "mkdir -p \"$HOME/Music/pianobarplus/favorites/%s/%s/\" && ln -f \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/favorites/%s/%s/%s.mp3\"",
 		reqData.song->artist, reqData.song->album, 
 		reqData.song->artist, reqData.song->album, reqData.song->title, 
 		reqData.song->artist, reqData.song->album, reqData.song->title);

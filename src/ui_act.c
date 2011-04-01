@@ -163,8 +163,7 @@ BarUiActCallback(BarUiActBanSong) {
 	system(removeSong);
 	
 	char removeLink[1000];
-	sprintf(removeLink, "rm \"$HOME/Music/pianobarplus/stations/%s/%s.mp3\"", app->curStation->name, reqData.song->title);
-	printf(removeLink);
+	sprintf(removeLink, "rm \"$HOME/Music/pianobarplus/stations/%s/%s.mp3\"", app->curStation->name, reqData.song->title);       
 	system(removeLink);
 	  
 	BarUiMsg (MSG_INFO, "Banning song... ");

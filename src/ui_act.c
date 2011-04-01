@@ -318,6 +318,12 @@ BarUiActCallback(BarUiActLoveSong) {
 	PianoRequestDataRateSong_t reqData;
 	reqData.song = app->playlist;
 	reqData.rating = PIANO_RATE_LOVE;
+	char loveSongCopy[1000];
+	sprintf(loveSongCopy, "mkdir -p \"$HOME/Music/pianobarplus/favorites/%s/%s/\" && ln \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/favorites/%s/%s/%s.mp3\"",
+		reqData.song->artist, reqData.song->album, 
+		reqData.song->artist, reqData.song->album, reqData.song->title, 
+		reqData.song->artist, reqData.song->album, reqData.song->title);
+	system(loveSongCopy);
 
 	BarUiMsg (MSG_INFO, "Loving song... ");
 	BarUiActDefaultPianoCall (PIANO_REQUEST_RATE_SONG, &reqData);

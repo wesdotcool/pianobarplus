@@ -424,7 +424,7 @@ int main (int argc, char **argv) {
 	WaitressInit (&app.waith);
 	strncpy (app.waith.host, PIANO_RPC_HOST, sizeof (app.waith.host)-1);
 	strncpy (app.waith.port, PIANO_RPC_PORT, sizeof (app.waith.port)-1);
-
+	
 	BarSettingsInit (&app.settings);
 	BarSettingsRead (&app.settings);
 

@@ -47,6 +47,7 @@ void BarGetXdgConfigDir (const char *filename, char *retDir,
 		size_t retDirN) {
 	char *xdgConfigDir = NULL;
 
+	printf(filename);
 	if ((xdgConfigDir = getenv ("XDG_CONFIG_HOME")) != NULL &&
 			strlen (xdgConfigDir) > 0) {
 		/* special dir: $xdg_config_home */
@@ -55,6 +56,7 @@ void BarGetXdgConfigDir (const char *filename, char *retDir,
 		if ((xdgConfigDir = getenv ("HOME")) != NULL &&
 				strlen (xdgConfigDir) > 0) {
 			/* standard config dir: $home/.config */
+		        /* standard config for our setup is $HOME/.config/pianobar+/config */ 
 			snprintf (retDir, retDirN, "%s/.config/%s", xdgConfigDir,
 					filename);
 		} else {
@@ -123,7 +125,6 @@ void BarSettingsRead (BarSettings_t *settings) {
 	memcpy (settings->keys, defaultKeys, sizeof (defaultKeys));
 	settings->loveIcon = strdup ("<3");
 	settings->banIcon = strdup ("</3");
-
 	BarGetXdgConfigDir (PACKAGE "/config", configfile, sizeof (configfile));
 	if ((configfd = fopen (configfile, "r")) == NULL) {
 		return;

@@ -160,11 +160,12 @@ BarUiActCallback(BarUiActBanSong) {
 
 	char removeSong[1000];
 	sprintf(removeSong, "rm \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\"", reqData.song->artist, reqData.song->album, reqData.song->title);
-	system(removeSong);
-	
 	char removeLink[1000];
 	sprintf(removeLink, "rm \"$HOME/Music/pianobarplus/stations/%s/%s.mp3\"", app->curStation->name, reqData.song->title);       
-	system(removeLink);
+	if(app->settings.banDelete){
+	  system(removeSong);
+	  system(removeLink);
+	}
 	  
 	BarUiMsg (MSG_INFO, "Banning song... ");
 	if (BarUiActDefaultPianoCall (PIANO_REQUEST_RATE_SONG, &reqData)) {

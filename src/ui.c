@@ -552,8 +552,12 @@ inline void BarUiPrintStation (PianoStation_t *station) {
  */
 inline void BarUiPrintSong (const BarSettings_t *settings,
 			    const PianoSong_t *song, const BarApp_t *app, const PianoStation_t *station) {
-	BarUiMsg (MSG_PLAYING, "\"%s\" by \"%s\" on \"%s\"%s%s%s%s\n",
-			song->title, song->artist, song->album,
+  char* COLORRED = "\x1b[1;31m";
+  char* COLORBLUE = "\x1b[1;34m";
+  char* COLORGREEN = "\x1b[1;32m";
+  char* COLORDEFAULT = "\x1b[0m";
+          BarUiMsg (MSG_PLAYING, "%s%s%s by %s%s%s on %s%s%s%s%s%s%s\n", COLORRED,
+   		    song->title, COLORDEFAULT, COLORBLUE, song->artist, COLORDEFAULT, COLORGREEN, song->album, COLORDEFAULT,
 			(song->rating == PIANO_RATE_LOVE) ? " " : "",
 			(song->rating == PIANO_RATE_LOVE) ? settings->loveIcon : "",
 			station != NULL ? " @ " : "",

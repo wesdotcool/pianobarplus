@@ -85,7 +85,8 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->eventCmd);
 	free (settings->loveIcon);
 	free (settings->banIcon);
-	free(settings->banDelete);
+	free (settings->banDelete);
+	free (settings->setFavoriteFormat);
 	memset (settings, 0, sizeof (*settings));
 }
 

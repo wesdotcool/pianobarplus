@@ -26,6 +26,17 @@ THE SOFTWARE.
 #define _POSIX_C_SOURCE 1 /* fileno() */
 #define _BSD_SOURCE /* strdup() */
 
+/** These are colors for color printing **/
+#define COLORRED  "\x1b[1;31m"
+#define COLORBLUE  "\x1b[1;34m"
+#define COLORGREEN "\x1b[1;32m"
+#define COLORTEAL  "\x1b[1;36m"
+#define COLORPINK  "\x1b[1;35m"
+#define COLORYELLOW  "\x1b[1;33m"
+#define COLORGREY  "\x1b[1;37m"
+#define COLORDEFAULT  "\x1b[0m"
+
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -54,7 +65,7 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 
 	switch (type) {
 		case MSG_INFO:
-			printf (ANSI_CLEAR_LINE "(i) ");
+   		        printf (ANSI_CLEAR_LINE "%s(i) ", COLORYELLOW);
 			break;
 
 		case MSG_PLAYING:
@@ -74,7 +85,7 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 			break;
 
 		case MSG_LIST:
-			printf (ANSI_CLEAR_LINE "\t");
+   		        printf (ANSI_CLEAR_LINE "%s\t", COLORTEAL);
 			break;
 	
 		default:
@@ -83,10 +94,10 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 	va_start (fmtargs, format);
 	vprintf (format, fmtargs);
 	va_end (fmtargs);
-
+	
 	fflush (stdout);
-
-	#undef ANSI_CLEAR_LINE
+	printf("%s", COLORDEFAULT);
+        #undef ANSI_CLEAR_LINE
 }
 
 /*	prints human readable status message based on return value
@@ -552,10 +563,6 @@ inline void BarUiPrintStation (PianoStation_t *station) {
  */
 inline void BarUiPrintSong (const BarSettings_t *settings,
 			    const PianoSong_t *song, const BarApp_t *app, const PianoStation_t *station) {
-  char* COLORRED = "\x1b[1;31m";
-  char* COLORBLUE = "\x1b[1;34m";
-  char* COLORGREEN = "\x1b[1;32m";
-  char* COLORDEFAULT = "\x1b[0m";
           BarUiMsg (MSG_PLAYING, "%s%s%s by %s%s%s on %s%s%s%s%s%s%s\n", COLORRED,
    		    song->title, COLORDEFAULT, COLORBLUE, song->artist, COLORDEFAULT, COLORGREEN, song->album, COLORDEFAULT,
 			(song->rating == PIANO_RATE_LOVE) ? " " : "",

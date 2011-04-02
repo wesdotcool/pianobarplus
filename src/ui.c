@@ -41,6 +41,7 @@ THE SOFTWARE.
 
 #include "ui.h"
 #include "ui_readline.h"
+#include "utils.h"
 
 typedef int (*BarSortFunc_t) (const void *, const void *);
 
@@ -568,22 +569,50 @@ inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station,
      It is currently broken so it will always download the song */
   char find[200];
   sprintf(find, "find $HOME/Music/pianobarplus -name \"%s by %s.mp3\" > /dev/null 2> /dev/null", song->title, song->artist);
+
+  /* This will replace any '/' character in the song or artist names with a ':' character so it will save correctly */
+  char* songTitle = (char*) malloc(sizeof(char) * (strlen(song->title) + 1));
+  char* songArtist = (char*) malloc(sizeof(char) * (strlen(song->artist) + 1));
+  char* songAlbum = (char*) malloc(sizeof(char) * (strlen(song->album) + 1));
+  char* stationName = (char*) malloc(sizeof(char) * (strlen(app->curStation->name) + 1));
+  strcpy(songTitle,song->title);
+  strcpy(songArtist,song->artist);
+  strcpy(songAlbum,song->album);
+  strcpy(stationName,app->curStation->name);
+  replaceChars(songTitle, '/',':');
+  replaceChars(songArtist, '/',':');
+  replaceChars(songAlbum, '/',':');
+  replaceChars(stationName, '/',':');
+  
   if (!system(find)) {
     char downloadCommand[1000];
     sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null", 
-	    song->artist, song->album, song->artist, song->album, song->title, song->audioUrl);
+	    songArtist, songAlbum, songArtist, songAlbum, songTitle, song->audioUrl);
 
     char makeStationCommand[200];
     sprintf(makeStationCommand, "mkdir -p \"$HOME/Music/pianobarplus/stations/%s\" &>/dev/null",
-	    app->curStation->name);
+	    stationName);
 
     char linkCommand[200];
     sprintf(linkCommand, "ln -f \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/stations/%s\"",
-	    song->artist, song->album, song->title, app->curStation->name);
+	    songArtist, songAlbum, songTitle, stationName);
 
     char totalCommand[2000];
     sprintf(totalCommand, "%s && %s && %s", downloadCommand, makeStationCommand, linkCommand);
     system(totalCommand);
+  }
+  
+  free(songTitle);
+  free(songArtist);
+  free(songAlbum);
+  free(stationName);
+}
+
+inline void PlusBarGrowl (const char *event, const PianoSong_t *song) {
+  if (strcmp(event, "songstart") == 0) {
+    char growlCommand[200];
+    sprintf(growlCommand, "growlnotify -t \"PianoBar++ Is Now Playing:\" -m \"%s by %s\"", song->title, song->artist);
+    system(growlCommand);
   }
 }
 
@@ -623,12 +652,21 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 	pid_t chld;
 	char pipeBuf[1024];
 	int pipeFd[2];
+	
+	/* The current implementation of growl is simple and
+	   may change. Currently if the growl flag is on, then
+	   pianobar will notify you of everything */
+	if (settings->growl) {
+	  PlusBarGrowl(type, curSong);
+	}
+
 
 	if (settings->eventCmd == NULL) {
 		/* nothing to do... */
 		return;
 	}
-
+	
+	
 	/* prepare stdin content */
 	memset (pipeBuf, 0, sizeof (pipeBuf));
 	snprintf (pipeBuf, sizeof (pipeBuf),

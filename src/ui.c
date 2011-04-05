@@ -613,6 +613,18 @@ inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station,
     system(totalCommand);
   }
   
+  /* This checks if we have this song in the unknown album so we can remove it */
+  char statCommand[300];
+  sprintf(statCommand, "stat \"$HOME/Music/pianobarplus/artists/%s/unknown/$s\" >/dev/null 2>/dev/null",
+	  songArtist, songTitle);
+  /* If the song is in the artist's "unknown" folder, this if-block will rm it */
+  if (!system(statCommand)) {
+    char rmCommand[300];
+    sprintf(rmCommand, "rm \"$HOME/Music/pianobarplus/artists/%s/unknown/%s.mp3\"",
+	    songArtist, songTitle);
+    system(rmCommand);
+  }
+
   free(songTitle);
   free(songArtist);
   free(songAlbum);

@@ -34,7 +34,7 @@ THE SOFTWARE.
 #define COLORPINK  "\x1b[1;35m"
 #define COLORYELLOW  "\x1b[1;33m"
 #define COLORGREY  "\x1b[1;37m"
-#define COLORDEFAULT  "\x1b[0m"
+#define COLORDEFAULT  "\x1b[0m"  /* This is black */
 
 
 #include <stdio.h>
@@ -594,28 +594,29 @@ inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station,
   replaceChars(songArtist, '/',':');
   replaceChars(songAlbum, '/',':');
   replaceChars(stationName, '/',':');
-  
-  if (!system(find)) {
-    char downloadCommand[1000];
-    sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null", 
-	    songArtist, songAlbum, songArtist, songAlbum, songTitle, song->audioUrl);
 
-    char makeStationCommand[200];
-    sprintf(makeStationCommand, "mkdir -p \"$HOME/Music/pianobarplus/stations/%s\" &>/dev/null",
-	    stationName);
+  //There should be some sort of check to see if we already have the song
+  char downloadCommand[1000];
+  sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" >/dev/null", 
+	  songArtist, songAlbum, songArtist, songAlbum, songTitle, song->audioUrl);
 
-    char linkCommand[200];
-    sprintf(linkCommand, "ln -f \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/stations/%s\"",
-	    songArtist, songAlbum, songTitle, stationName);
+  char makeStationCommand[200];
+  sprintf(makeStationCommand, "mkdir -p \"$HOME/Music/pianobarplus/stations/%s\" >/dev/null",
+	  stationName);
 
-    char totalCommand[2000];
-    sprintf(totalCommand, "%s && %s && %s", downloadCommand, makeStationCommand, linkCommand);
-    system(totalCommand);
-  }
+  char linkCommand[200];
+  sprintf(linkCommand, "ln -f \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/stations/%s\"",
+	  songArtist, songAlbum, songTitle, stationName);
+
+  char totalCommand[2000];
+  sprintf(totalCommand, "%s && %s && %s", downloadCommand, makeStationCommand, linkCommand);
+  system(totalCommand);
+
+
   
   /* This checks if we have this song in the unknown album so we can remove it */
   char statCommand[300];
-  sprintf(statCommand, "stat \"$HOME/Music/pianobarplus/artists/%s/unknown/$s\" >/dev/null 2>/dev/null",
+  sprintf(statCommand, "stat \"$HOME/Music/pianobarplus/artists/%s/unknown/$s.mp3\" >/dev/null 2>/dev/null",
 	  songArtist, songTitle);
   /* If the song is in the artist's "unknown" folder, this if-block will rm it */
   if (!system(statCommand)) {

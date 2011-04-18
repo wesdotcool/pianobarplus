@@ -2,8 +2,10 @@
 #define _CONFIG_H
 
 /* package name */
-#define PACKAGE "pianobar+"
+#define PACKAGE "pianobar++"
 
-#define VERSION "2011.01.24-dev"
+#define VERSION "2011.04.05-dev"
+
+#define MUSIC_PATH "$HOME/Music/pianobar++/"
 
 #endif /* _CONFIG_H */

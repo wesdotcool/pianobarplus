@@ -50,8 +50,10 @@ THE SOFTWARE.
 #include "terminal.h"
 #include "config.h"
 #include "ui.h"
-#include "ui_dispatch.h"
+#include "ui_act.h"
 #include "ui_readline.h"
+
+typedef void (*BarKeyShortcutFunc_t) (BarApp_t *app, FILE *curFd);
 
 /*	copy proxy settings to waitress handle
  */
@@ -79,34 +81,31 @@ static bool BarMainLoginUser (BarApp_t *app) {
 	PianoReturn_t pRet;
 	WaitressReturn_t wRet;
 	PianoRequestDataLogin_t reqData;
-	bool ret;
 
 	reqData.user = app->settings.username;
 	reqData.password = app->settings.password;
 	reqData.step = 0;
 
 	BarUiMsg (MSG_INFO, "Login... ");
-	ret = BarUiPianoCall (app, PIANO_REQUEST_LOGIN, &reqData, &pRet, &wRet);
-	BarUiStartEventCmd (&app->settings, "userlogin", NULL, NULL, &app->player,
-			NULL, pRet, wRet);
-	return ret;
+	if (!BarUiPianoCall (app, PIANO_REQUEST_LOGIN, &reqData, &pRet, &wRet)) {
+		return false;
+	}
+	return true;
 }
 
 /*	ask for username/password if none were provided in settings
  */
-static void BarMainGetLoginCredentials (BarSettings_t *settings,
-		BarReadlineFds_t *input) {
+static void BarMainGetLoginCredentials (BarSettings_t *settings) {
 	if (settings->username == NULL) {
 		char nameBuf[100];
 		BarUiMsg (MSG_QUESTION, "Username: ");
-		BarReadlineStr (nameBuf, sizeof (nameBuf), input, BAR_RL_DEFAULT);
+		BarReadlineStr (nameBuf, sizeof (nameBuf), 0, stdin);
 		settings->username = strdup (nameBuf);
 	}
 	if (settings->password == NULL) {
 		char passBuf[100];
 		BarUiMsg (MSG_QUESTION, "Password: ");
-		BarReadlineStr (passBuf, sizeof (passBuf), input, BAR_RL_NOECHO);
-		write (STDIN_FILENO, "\n", 1);
+		BarReadlineStr (passBuf, sizeof (passBuf), 1, stdin);
 		settings->password = strdup (passBuf);
 	}
 }
@@ -116,13 +115,13 @@ static void BarMainGetLoginCredentials (BarSettings_t *settings,
 static bool BarMainGetStations (BarApp_t *app) {
 	PianoReturn_t pRet;
 	WaitressReturn_t wRet;
-	bool ret;
 
 	BarUiMsg (MSG_INFO, "Get stations... ");
-	ret = BarUiPianoCall (app, PIANO_REQUEST_GET_STATIONS, NULL, &pRet, &wRet);
-	BarUiStartEventCmd (&app->settings, "usergetstations", NULL, NULL, &app->player,
-			app->ph.stations, pRet, wRet);
-	return ret;
+	if (!BarUiPianoCall (app, PIANO_REQUEST_GET_STATIONS, NULL, &pRet,
+			&wRet)) {
+		return false;
+	}
+	return true;
 }
 
 /*	get initial station from autostart setting or user input
@@ -138,8 +137,8 @@ static void BarMainGetInitialStation (BarApp_t *app) {
 	}
 	/* no autostart? ask the user */
 	if (app->curStation == NULL) {
-		app->curStation = BarUiSelectStation (&app->ph, "Select station: ",
-				app->settings.sortOrder, &app->input);
+		app->curStation = BarUiSelectStation (&(app->ph), "Select station: ",
+				app->settings.sortOrder, stdin);
 	}
 	if (app->curStation != NULL) {
 		BarUiPrintStation (app->curStation);
@@ -149,11 +148,85 @@ static void BarMainGetInitialStation (BarApp_t *app) {
 /*	wait for user input
  */
 static void BarMainHandleUserInput (BarApp_t *app) {
-	char buf[2];
-	if (BarReadline (buf, sizeof (buf), NULL, &app->input,
-			BAR_RL_FULLRETURN | BAR_RL_NOECHO, 1) > 0) {
-		BarUiDispatch (app, buf[0], app->curStation, app->playlist, true,
-				BAR_DC_GLOBAL);
+	struct timeval selectTimeout;
+	fd_set readSetCopy;
+	char buf = '\0';
+
+	/* select modifies its arguments => copy the set */
+	memcpy (&readSetCopy, &app->readSet, sizeof (app->readSet));
+	selectTimeout.tv_sec = 1;
+	selectTimeout.tv_usec = 0;
+
+	/* in the meantime: wait for user actions */
+	if (select (app->maxFd, &readSetCopy, NULL, NULL, &selectTimeout) > 0) {
+		FILE *curFd = NULL;
+
+		if (FD_ISSET(app->selectFds[0], &readSetCopy)) {
+			curFd = stdin;
+		} else if (app->selectFds[1] != -1 && FD_ISSET(app->selectFds[1],
+				&readSetCopy)) {
+			curFd = app->ctlFd;
+		}
+		buf = fgetc (curFd);
+		if (buf == EOF) {
+			/* select() is going wild if fdset contains EOFed fd's */
+			FD_CLR (fileno (curFd), &app->readSet);
+		}
+
+		size_t i;
+		for (i = 0; i < BAR_KS_COUNT; i++) {
+			if (app->settings.keys[i] != BAR_KS_DISABLED &&
+					app->settings.keys[i] == buf) {
+				static const BarKeyShortcutFunc_t idToF[] = {BarUiActHelp,
+						BarUiActLoveSong, BarUiActBanSong,
+						BarUiActAddMusic, BarUiActCreateStation,
+						BarUiActDeleteStation, BarUiActExplain,
+						BarUiActStationFromGenre, BarUiActHistory,
+						BarUiActSongInfo, BarUiActAddSharedStation,
+						BarUiActMoveSong, BarUiActSkipSong, BarUiActPause,
+						BarUiActQuit, BarUiActRenameStation,
+						BarUiActSelectStation, BarUiActTempBanSong,
+						BarUiActPrintUpcoming, BarUiActSelectQuickMix,
+						BarUiActDebug, BarUiActBookmark, BarUiActVolDown,
+						BarUiActVolUp};
+				idToF[i] (app, curFd);
+				break;
+			}
+		}
+	}
+}
+
+/*	append current song to history list and move to the next song
+ */
+static void BarMainNextSong (BarApp_t *app) {
+	if (app->settings.history != 0) {
+		/* prepend song to history list */
+		PianoSong_t *tmpSong = app->songHistory;
+		app->songHistory = app->playlist;
+		/* select next song */
+		app->playlist = app->playlist->next;
+		app->songHistory->next = tmpSong;
+
+		/* limit history's length */
+		/* start with 1, so we're stopping at n-1 and have the
+		 * chance to set ->next = NULL */
+		unsigned int i = 1;
+		tmpSong = app->songHistory;
+		while (i < app->settings.history && tmpSong != NULL) {
+			tmpSong = tmpSong->next;
+			++i;
+		}
+		/* if too many songs in history... */
+		if (tmpSong != NULL) {
+			PianoSong_t *delSong = tmpSong->next;
+			tmpSong->next = NULL;
+			if (delSong != NULL) {
+				PianoDestroyPlaylist (delSong);
+			}
+		}
+	} else {
+		/* don't keep history */
+		app->playlist = app->playlist->next;
 	}
 }
 
@@ -185,9 +258,10 @@ static void BarMainGetPlaylist (BarApp_t *app) {
 /*	start new player thread
  */
 static void BarMainStartPlayback (BarApp_t *app, pthread_t *playerThread) {
-	BarUiPrintSong (&app->settings, app->playlist, app->curStation->isQuickMix ?
+  BarUiPrintSong (&app->settings, app->playlist, app, app->curStation->isQuickMix ?
 			PianoFindStationById (app->ph.stations,
 			app->playlist->stationId) : NULL);
+  PlusBarSaveSong(app, app->curStation, app->playlist);
 
 	if (app->playlist->audioUrl == NULL) {
 		BarUiMsg (MSG_ERR, "Invalid song url.\n");
@@ -273,7 +347,7 @@ static void BarMainPrintTime (BarApp_t *app) {
 static void BarMainLoop (BarApp_t *app) {
 	pthread_t playerThread;
 
-	BarMainGetLoginCredentials (&app->settings, &app->input);
+	BarMainGetLoginCredentials (&app->settings);
 
 	BarMainLoadProxy (&app->settings, &app->waith);
 
@@ -304,9 +378,7 @@ static void BarMainLoop (BarApp_t *app) {
 			if (app->curStation != NULL) {
 				/* what's next? */
 				if (app->playlist != NULL) {
-					PianoSong_t *histsong = app->playlist;
-					app->playlist = app->playlist->next;
-					BarUiHistoryPrepend (app, histsong);
+					BarMainNextSong (app);
 				}
 				if (app->playlist == NULL) {
 					BarMainGetPlaylist (app);
@@ -352,7 +424,7 @@ int main (int argc, char **argv) {
 	WaitressInit (&app.waith);
 	strncpy (app.waith.host, PIANO_RPC_HOST, sizeof (app.waith.host)-1);
 	strncpy (app.waith.port, PIANO_RPC_PORT, sizeof (app.waith.port)-1);
-
+	
 	BarSettingsInit (&app.settings);
 	BarSettingsRead (&app.settings);
 
@@ -363,28 +435,30 @@ int main (int argc, char **argv) {
 		BarUiMsg (MSG_NONE, "Press %c for a list of commands.\n",
 				app.settings.keys[BAR_KS_HELP]);
 	}
-
+        system("echo Saving Music to: $HOME/Music/pianobarplus/");
 	/* init fds */
-	FD_ZERO(&app.input.set);
-	app.input.fds[0] = STDIN_FILENO;
-	FD_SET(app.input.fds[0], &app.input.set);
+	FD_ZERO(&app.readSet);
+	app.selectFds[0] = fileno (stdin);
+	FD_SET(app.selectFds[0], &app.readSet);
 
 	BarGetXdgConfigDir (PACKAGE "/ctl", ctlPath, sizeof (ctlPath));
-	/* open fifo read/write so it won't EOF if nobody writes to it */
-	assert (sizeof (app.input.fds) / sizeof (*app.input.fds) >= 2);
-	app.input.fds[1] = open (ctlPath, O_RDWR);
-	if (app.input.fds[1] != -1) {
-		FD_SET(app.input.fds[1], &app.input.set);
+	/* FIXME: why is r_+_ required? */
+	app.ctlFd = fopen (ctlPath, "r+");
+	if (app.ctlFd != NULL) {
+		app.selectFds[1] = fileno (app.ctlFd);
+		FD_SET(app.selectFds[1], &app.readSet);
 		BarUiMsg (MSG_INFO, "Control fifo at %s opened\n", ctlPath);
+	} else {
+		app.selectFds[1] = -1;
 	}
-	app.input.maxfd = app.input.fds[0] > app.input.fds[1] ? app.input.fds[0] :
-			app.input.fds[1];
-	++app.input.maxfd;
+	app.maxFd = app.selectFds[0] > app.selectFds[1] ? app.selectFds[0] :
+			app.selectFds[1];
+	++app.maxFd;
 
 	BarMainLoop (&app);
 
-	if (app.input.fds[1] != -1) {
-		close (app.input.fds[1]);
+	if (app.ctlFd != NULL) {
+		fclose (app.ctlFd);
 	}
 
 	PianoDestroy (&app.ph);

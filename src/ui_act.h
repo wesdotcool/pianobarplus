@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2011
+Copyright (c) 2008-2010
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,14 +24,9 @@ THE SOFTWARE.
 #ifndef _UI_ACT_H
 #define _UI_ACT_H
 
-#include <piano.h>
-
 #include "main.h"
-#include "ui_dispatch.h"
 
-#define BarUiActCallback(name) void name (BarApp_t *app, \
-		PianoStation_t *selStation, PianoSong_t *selSong, \
-		BarUiDispatchContext_t context)
+#define BarUiActCallback(name) void name (BarApp_t *app, FILE *curFd)
 
 BarUiActCallback(BarUiActHelp);
 BarUiActCallback(BarUiActAddMusic);
@@ -57,6 +52,5 @@ BarUiActCallback(BarUiActHistory);
 BarUiActCallback(BarUiActBookmark);
 BarUiActCallback(BarUiActVolDown);
 BarUiActCallback(BarUiActVolUp);
-BarUiActCallback(BarUiActManageStation);
 
 #endif /* _UI_ACT_H */

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2010
+Copyright (c) 2008-2011
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -39,7 +39,7 @@ THE SOFTWARE.
 #include "crypt.h"
 #include "config.h"
 
-#define PIANO_PROTOCOL_VERSION "29"
+#define PIANO_PROTOCOL_VERSION "30"
 #define PIANO_RPC_HOST "www.pandora.com"
 #define PIANO_RPC_PORT "80"
 #define PIANO_RPC_PATH "/radio/xmlrpc/v" PIANO_PROTOCOL_VERSION "?"
@@ -57,32 +57,29 @@ void PianoInit (PianoHandle_t *ph) {
 			(unsigned long) time (NULL) % 10000000);
 }
 
+/*	destroy artist linked list
+ */
+void PianoDestroyArtists (PianoArtist_t *artists) {
+	PianoArtist_t *curArtist, *lastArtist;
+
+	curArtist = artists;
+	while (curArtist != NULL) {
+		free (curArtist->name);
+		free (curArtist->musicId);
+		free (curArtist->seedId);
+		lastArtist = curArtist;
+		curArtist = curArtist->next;
+		free (lastArtist);
+	}
+}
+
 /*	free complete search result
  *	@public yes
  *	@param search result
  */
 void PianoDestroySearchResult (PianoSearchResult_t *searchResult) {
-	PianoArtist_t *curArtist, *lastArtist;
-	PianoSong_t *curSong, *lastSong;
-
-	curArtist = searchResult->artists;
-	while (curArtist != NULL) {
-		free (curArtist->name);
-		free (curArtist->musicId);
-		lastArtist = curArtist;
-		curArtist = curArtist->next;
-		free (lastArtist);
-	}
-
-	curSong = searchResult->songs;
-	while (curSong != NULL) {
-		free (curSong->title);
-		free (curSong->artist);
-		free (curSong->musicId);
-		lastSong = curSong;
-		curSong = curSong->next;
-		free (lastSong);
-	}
+	PianoDestroyArtists (searchResult->artists);
+	PianoDestroyPlaylist (searchResult->songs);
 }
 
 /*	free single station
@@ -128,10 +125,19 @@ void PianoDestroyPlaylist (PianoSong_t *playlist) {
 		free (curSong->stationId);
 		free (curSong->album);
 		free (curSong->artistMusicId);
+		free (curSong->feedbackId);
+		free (curSong->seedId);
+		free (curSong->detailUrl);
 		lastSong = curSong;
 		curSong = curSong->next;
 		free (lastSong);
 	}
+}
+
+void PianoDestroyStationInfo (PianoStationInfo_t *info) {
+	PianoDestroyPlaylist (info->feedback);
+	PianoDestroyPlaylist (info->songSeeds);
+	PianoDestroyArtists (info->artistSeeds);
 }
 
 /*	destroy genre linked list
@@ -242,7 +248,16 @@ PianoReturn_t PianoRequest (PianoHandle_t *ph, PianoRequest_t *req,
 							"rid=%s&method=sync", ph->routeId);
 					break;
 
-				case 1:
+				case 1: {
+					char *xmlencodedPassword = NULL;
+
+					/* username == email address does not contain &,<,>," */
+					if ((xmlencodedPassword =
+							PianoXmlEncodeString (logindata->password)) ==
+							NULL) {
+						return PIANO_RET_OUT_OF_MEMORY;
+					}
+
 					snprintf (xmlSendBuf, sizeof (xmlSendBuf), 
 							"<?xml version=\"1.0\"?><methodCall>"
 							"<methodName>listener.authenticateListener</methodName>"
@@ -250,10 +265,13 @@ PianoReturn_t PianoRequest (PianoHandle_t *ph, PianoRequest_t *req,
 							"<param><value><string>%s</string></value></param>"
 							"<param><value><string>%s</string></value></param>"
 							"</params></methodCall>", (unsigned long) timestamp,
-							logindata->user, logindata->password);
+							logindata->user, xmlencodedPassword);
 					snprintf (req->urlPath, sizeof (req->urlPath), PIANO_RPC_PATH
 							"rid=%s&method=authenticateListener", ph->routeId);
+
+					free (xmlencodedPassword);
 					break;
+				}
 			}
 			break;
 		}
@@ -696,6 +714,78 @@ PianoReturn_t PianoRequest (PianoHandle_t *ph, PianoRequest_t *req,
 			break;
 		}
 
+		case PIANO_REQUEST_GET_STATION_INFO: {
+			/* get station information (seeds and feedback) */
+			PianoRequestDataGetStationInfo_t *reqData = req->data;
+
+			assert (reqData != NULL);
+			assert (reqData->station != NULL);
+
+			snprintf (xmlSendBuf, sizeof (xmlSendBuf), "<?xml version=\"1.0\"?>"
+					"<methodCall><methodName>station.getStation</methodName>"
+					"<params><param><value><int>%lu</int></value></param>"
+					/* auth token */
+					"<param><value><string>%s</string></value></param>"
+					/* station id */
+					"<param><value><string>%s</string></value></param>"
+					"</params></methodCall>", (unsigned long) timestamp,
+					ph->user.authToken, reqData->station->id);
+			snprintf (req->urlPath, sizeof (req->urlPath), PIANO_RPC_PATH
+					"rid=%s&lid=%s&method=getStation&arg1=%s",
+					ph->routeId, ph->user.listenerId, reqData->station->id);
+			break;
+		}
+
+		case PIANO_REQUEST_DELETE_FEEDBACK: {
+			PianoSong_t *song = req->data;
+
+			assert (song != NULL);
+
+			snprintf (xmlSendBuf, sizeof (xmlSendBuf), "<?xml version=\"1.0\"?>"
+					"<methodCall><methodName>station.deleteFeedback</methodName>"
+					"<params><param><value><int>%lu</int></value></param>"
+					/* auth token */
+					"<param><value><string>%s</string></value></param>"
+					/* feedback id */
+					"<param><value><string>%s</string></value></param>"
+					"</params></methodCall>", (unsigned long) timestamp,
+					ph->user.authToken, song->feedbackId);
+			snprintf (req->urlPath, sizeof (req->urlPath), PIANO_RPC_PATH
+					"rid=%s&lid=%s&method=deleteFeedback&arg1=%s",
+					ph->routeId, ph->user.listenerId, song->feedbackId);
+			break;
+		}
+
+		case PIANO_REQUEST_DELETE_SEED: {
+			PianoRequestDataDeleteSeed_t *reqData = req->data;
+			char *seedId = NULL;
+
+			assert (reqData != NULL);
+			assert (reqData->song != NULL || reqData->artist != NULL);
+
+			if (reqData->song != NULL) {
+				seedId = reqData->song->seedId;
+			} else if (reqData->artist != NULL) {
+				seedId = reqData->artist->seedId;
+			}
+
+			assert (seedId != NULL);
+
+			snprintf (xmlSendBuf, sizeof (xmlSendBuf), "<?xml version=\"1.0\"?>"
+					"<methodCall><methodName>station.deleteSeed</methodName>"
+					"<params><param><value><int>%lu</int></value></param>"
+					/* auth token */
+					"<param><value><string>%s</string></value></param>"
+					/* seed id */
+					"<param><value><string>%s</string></value></param>"
+					"</params></methodCall>", (unsigned long) timestamp,
+					ph->user.authToken, seedId);
+			snprintf (req->urlPath, sizeof (req->urlPath), PIANO_RPC_PATH
+					"rid=%s&lid=%s&method=deleteSeed&arg1=%s",
+					ph->routeId, ph->user.listenerId, seedId);
+			break;
+		}
+
 		/* "high-level" wrapper */
 		case PIANO_REQUEST_RATE_SONG: {
 			/* love/ban song */
@@ -967,6 +1057,7 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 		case PIANO_REQUEST_SET_QUICKMIX:
 		case PIANO_REQUEST_BOOKMARK_SONG:
 		case PIANO_REQUEST_BOOKMARK_ARTIST:
+		case PIANO_REQUEST_DELETE_FEEDBACK:
 			assert (req->responseData != NULL);
 
 			ret = PianoXmlParseSimple (req->responseData);
@@ -1016,6 +1107,25 @@ PianoReturn_t PianoResponse (PianoHandle_t *ph, PianoRequest_t *req) {
 			ret = PianoXmlParseSeedSuggestions (req->responseData,
 					&reqData->searchResult);
 			break;
+		}
+
+		case PIANO_REQUEST_GET_STATION_INFO: {
+			/* get station information (seeds and feedback) */
+			PianoRequestDataGetStationInfo_t *reqData = req->data;
+
+			assert (req->responseData != NULL);
+			assert (reqData != NULL);
+
+			ret = PianoXmlParseGetStationInfo (req->responseData,
+					&reqData->info);
+			break;
+		}
+
+		case PIANO_REQUEST_DELETE_SEED: {
+			assert (req->responseData != NULL);
+
+			/* dummy function, checks for errors only */
+			ret = PianoXmlParseTranformStation (req->responseData);
 		}
 	}
 
@@ -1104,6 +1214,10 @@ const char *PianoErrorToStr (PianoReturn_t ret) {
 
 		case PIANO_RET_QUICKMIX_NOT_PLAYABLE:
 			return "Quickmix not playable.";
+			break;
+
+		case PIANO_RET_REMOVING_TOO_MANY_SEEDS:
+			return "Last seed cannot be removed.";
 			break;
 
 		default:

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2010
+Copyright (c) 2008-2011
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,8 +27,7 @@ THE SOFTWARE.
 #include <piano.h>
 #include <waitress.h>
 
-/* keep in mind that you have to update several arrays in main.c/ui_act.c too,
- * if you're adding new shortcuts */
+/* update structure in ui_dispatch.h if you add shortcuts here */
 typedef enum {
 	BAR_KS_HELP = 0,
 	BAR_KS_LOVE = 1,
@@ -54,8 +53,9 @@ typedef enum {
 	BAR_KS_BOOKMARK = 21,
 	BAR_KS_VOLDOWN = 22,
 	BAR_KS_VOLUP = 23,
+	BAR_KS_MANAGESTATION = 24,
 	/* insert new shortcuts _before_ this element and increase its value */
-	BAR_KS_COUNT = 24,
+	BAR_KS_COUNT = 25,
 } BarKeyShortcutId_t;
 
 #define BAR_KS_DISABLED '\x00'
@@ -83,9 +83,7 @@ typedef struct {
 	char *autostartStation;
 	char *eventCmd;
 	char *loveIcon;
-        char *banIcon;
-        char *banDelete;
-        char *setFavoriteFormat;
+	char *banIcon;
 } BarSettings_t;
 
 void BarSettingsInit (BarSettings_t *);

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2010
+Copyright (c) 2008-2011
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -34,6 +34,7 @@ THE SOFTWARE.
 #include <errno.h>
 #include <strings.h>
 #include <assert.h>
+#include <ctype.h> /* tolower() */
 
 /* waitpid () */
 #include <sys/types.h>
@@ -43,6 +44,48 @@ THE SOFTWARE.
 #include "ui_readline.h"
 
 typedef int (*BarSortFunc_t) (const void *, const void *);
+
+/*	is string a number?
+ */
+static bool isnumeric (const char *s) {
+	if (*s == '\0') {
+		return false;
+	}
+	while (*s != '\0') {
+		if (!isdigit ((unsigned char) *s)) {
+			return false;
+		}
+		++s;
+	}
+	return true;
+}
+
+/*	find needle in haystack, ignoring case, and return first position
+ */
+static const char *BarStrCaseStr (const char *haystack, const char *needle) {
+	const char *needlePos = needle;
+
+	assert (haystack != NULL);
+	assert (needle != NULL);
+
+	if (*needle == '\0') {
+		return haystack;
+	}
+
+	while (*haystack != '\0') {
+		if (tolower ((unsigned char) *haystack) == tolower ((unsigned char) *needlePos)) {
+			++needlePos;
+		} else {
+			needlePos = needle;
+		}
+		++haystack;
+		if (*needlePos == '\0') {
+			return haystack - strlen (needle);
+		}
+	}
+
+	return NULL;
+}
 
 /*	output message and flush stdout
  *	@param message
@@ -258,7 +301,7 @@ static int BarStationCmpQuickmix10NameZA (const void *a, const void *b) {
  *	@param stations
  *	@return NULL-terminated array with sorted stations
  */
-PianoStation_t **BarSortedStations (PianoStation_t *unsortedStations,
+static PianoStation_t **BarSortedStations (PianoStation_t *unsortedStations,
 		size_t *retStationCount, BarStationSorting_t order) {
 	static const BarSortFunc_t orderMapping[] = {BarStationNameAZCmp,
 			BarStationNameZACmp,
@@ -297,39 +340,53 @@ PianoStation_t **BarSortedStations (PianoStation_t *unsortedStations,
 
 /*	let user pick one station
  *	@param piano handle
+ *	@param prompt string
+ *	@param station list sort order
+ *	@param input fds
  *	@return pointer to selected station or NULL
  */
 PianoStation_t *BarUiSelectStation (PianoHandle_t *ph, const char *prompt,
-		BarStationSorting_t order, FILE *curFd) {
+		BarStationSorting_t order, BarReadlineFds_t *input) {
 	PianoStation_t **sortedStations = NULL, *retStation = NULL;
 	size_t stationCount, i;
-	int input;
+	char buf[100];
 
 	if (ph->stations == NULL) {
 		BarUiMsg (MSG_ERR, "No station available.\n");
 		return NULL;
 	}
 
+	memset (buf, 0, sizeof (buf));
+
 	/* sort and print stations */
 	sortedStations = BarSortedStations (ph->stations, &stationCount, order);
-	for (i = 0; i < stationCount; i++) {
-		const PianoStation_t *currStation = sortedStations[i];
-		BarUiMsg (MSG_LIST, "%2i) %c%c%c %s\n", i,
-				currStation->useQuickMix ? 'q' : ' ',
-				currStation->isQuickMix ? 'Q' : ' ',
-				!currStation->isCreator ? 'S' : ' ',
-				currStation->name);
-	}
 
-	BarUiMsg (MSG_QUESTION, prompt);
-	/* FIXME: using a _signed_ int is ugly */
-	if (BarReadlineInt (&input, curFd) == 0) {
-		free (sortedStations);
-		return NULL;
-	}
-	if (input < stationCount) {
-		retStation = sortedStations[input];
-	}
+	do {
+		for (i = 0; i < stationCount; i++) {
+			const PianoStation_t *currStation = sortedStations[i];
+			if (BarStrCaseStr (currStation->name, buf) != NULL) {
+				BarUiMsg (MSG_LIST, "%2i) %c%c%c %s\n", i,
+						currStation->useQuickMix ? 'q' : ' ',
+						currStation->isQuickMix ? 'Q' : ' ',
+						!currStation->isCreator ? 'S' : ' ',
+						currStation->name);
+			}
+		}
+
+		BarUiMsg (MSG_QUESTION, prompt);
+		if (BarReadlineStr (buf, sizeof (buf), input, BAR_RL_DEFAULT) == 0) {
+			free (sortedStations);
+			return NULL;
+		}
+
+		if (isnumeric (buf)) {
+			unsigned long selected = strtoul (buf, NULL, 0);
+			if (selected < stationCount) {
+				retStation = sortedStations[selected];
+			}
+		}
+	} while (retStation == NULL);
+
 	free (sortedStations);
 	return retStation;
 }
@@ -337,64 +394,86 @@ PianoStation_t *BarUiSelectStation (PianoHandle_t *ph, const char *prompt,
 /*	let user pick one song
  *	@param pianobar settings
  *	@param song list
- *	@param current fd
+ *	@param input fds
  *	@return pointer to selected item in song list or NULL
  */
 PianoSong_t *BarUiSelectSong (const BarSettings_t *settings,
-		PianoSong_t *startSong, FILE *curFd) {
+		PianoSong_t *startSong, BarReadlineFds_t *input) {
 	PianoSong_t *tmpSong = NULL;
-	int i = 0;
+	char buf[100];
 
-	i = BarUiListSongs (settings, startSong);
+	memset (buf, 0, sizeof (buf));
 
-	BarUiMsg (MSG_QUESTION, "Select song: ");
-	if (BarReadlineInt (&i, curFd) == 0) {
-		return NULL;
-	}
+	do {
+		BarUiListSongs (settings, startSong, buf);
 
-	tmpSong = startSong;
-	while (tmpSong != NULL && i > 0) {
-		tmpSong = tmpSong->next;
-		i--;
-	}
+		BarUiMsg (MSG_QUESTION, "Select song: ");
+		if (BarReadlineStr (buf, sizeof (buf), input, BAR_RL_DEFAULT) == 0) {
+			return NULL;
+		}
+
+		if (isnumeric (buf)) {
+			unsigned long i = strtoul (buf, NULL, 0);
+			tmpSong = startSong;
+			while (tmpSong != NULL && i > 0) {
+				tmpSong = tmpSong->next;
+				i--;
+			}
+		}
+	} while (tmpSong == NULL);
 
 	return tmpSong;
 }
 
 /*	let user pick one artist
  *	@param artists (linked list)
+ *	@param input fds
  *	@return pointer to selected artist or NULL on abort
  */
-PianoArtist_t *BarUiSelectArtist (PianoArtist_t *startArtist, FILE *curFd) {
+PianoArtist_t *BarUiSelectArtist (PianoArtist_t *startArtist,
+		BarReadlineFds_t *input) {
 	PianoArtist_t *tmpArtist = NULL;
-	int i = 0;
+	char buf[100];
+	unsigned long i;
 
-	/* print all artists */
-	tmpArtist = startArtist;
-	while (tmpArtist != NULL) {
-		BarUiMsg (MSG_LIST, "%2u) %s\n", i, tmpArtist->name);
-		i++;
-		tmpArtist = tmpArtist->next;
-	}
-	BarUiMsg (MSG_QUESTION, "Select artist: ");
-	if (BarReadlineInt (&i, curFd) == 0) {
-		return NULL;
-	}
-	tmpArtist = startArtist;
-	while (tmpArtist != NULL && i > 0) {
-		tmpArtist = tmpArtist->next;
-		i--;
-	}
+	memset (buf, 0, sizeof (buf));
+
+	do {
+		/* print all artists */
+		i = 0;
+		tmpArtist = startArtist;
+		while (tmpArtist != NULL) {
+			if (BarStrCaseStr (tmpArtist->name, buf) != NULL) {
+				BarUiMsg (MSG_LIST, "%2u) %s\n", i, tmpArtist->name);
+			}
+			i++;
+			tmpArtist = tmpArtist->next;
+		}
+
+		BarUiMsg (MSG_QUESTION, "Select artist: ");
+		if (BarReadlineStr (buf, sizeof (buf), input, BAR_RL_DEFAULT) == 0) {
+			return NULL;
+		}
+
+		if (isnumeric (buf)) {
+			i = strtoul (buf, NULL, 0);
+			tmpArtist = startArtist;
+			while (tmpArtist != NULL && i > 0) {
+				tmpArtist = tmpArtist->next;
+				i--;
+			}
+		}
+	} while (tmpArtist == NULL);
+
 	return tmpArtist;
 }
 
 /*	search music: query, search request, return music id
- *	@param piano handle
- *	@param read data from fd
+ *	@param app handle
  *	@param allow seed suggestions if != NULL
  *	@return musicId or NULL on abort/error
  */
-char *BarUiSelectMusicId (BarApp_t *app, FILE *curFd, char *similarToId) {
+char *BarUiSelectMusicId (BarApp_t *app, char *similarToId) {
 	char *musicId = NULL;
 	char lineBuf[100], selectBuf[2];
 	PianoSearchResult_t searchResult;
@@ -402,7 +481,8 @@ char *BarUiSelectMusicId (BarApp_t *app, FILE *curFd, char *similarToId) {
 	PianoSong_t *tmpSong;
 
 	BarUiMsg (MSG_QUESTION, "Search for artist/title: ");
-	if (BarReadlineStr (lineBuf, sizeof (lineBuf), 0, curFd) > 0) {
+	if (BarReadlineStr (lineBuf, sizeof (lineBuf), &app->input,
+			BAR_RL_DEFAULT) > 0) {
 		if (strcmp ("?", lineBuf) == 0 && similarToId != NULL) {
 			PianoReturn_t pRet;
 			WaitressReturn_t wRet;
@@ -436,15 +516,17 @@ char *BarUiSelectMusicId (BarApp_t *app, FILE *curFd, char *similarToId) {
 				searchResult.artists != NULL) {
 			/* songs and artists found */
 			BarUiMsg (MSG_QUESTION, "Is this an [a]rtist or [t]rack name? ");
-			BarReadline (selectBuf, sizeof (selectBuf), "at", 1, 0, curFd);
+			BarReadline (selectBuf, sizeof (selectBuf), "at", &app->input,
+					BAR_RL_FULLRETURN, -1);
 			if (*selectBuf == 'a') {
-				tmpArtist = BarUiSelectArtist (searchResult.artists, curFd);
+				tmpArtist = BarUiSelectArtist (searchResult.artists,
+						&app->input);
 				if (tmpArtist != NULL) {
 					musicId = strdup (tmpArtist->musicId);
 				}
 			} else if (*selectBuf == 't') {
 				tmpSong = BarUiSelectSong (&app->settings, searchResult.songs,
-						curFd);
+						&app->input);
 				if (tmpSong != NULL) {
 					musicId = strdup (tmpSong->musicId);
 				}
@@ -452,13 +534,13 @@ char *BarUiSelectMusicId (BarApp_t *app, FILE *curFd, char *similarToId) {
 		} else if (searchResult.songs != NULL) {
 			/* songs found */
 			tmpSong = BarUiSelectSong (&app->settings, searchResult.songs,
-					curFd);
+					&app->input);
 			if (tmpSong != NULL) {
 				musicId = strdup (tmpSong->musicId);
 			}
 		} else if (searchResult.artists != NULL) {
 			/* artists found */
-			tmpArtist = BarUiSelectArtist (searchResult.artists, curFd);
+			tmpArtist = BarUiSelectArtist (searchResult.artists, &app->input);
 			if (tmpArtist != NULL) {
 				musicId = strdup (tmpArtist->musicId);
 			}
@@ -472,9 +554,9 @@ char *BarUiSelectMusicId (BarApp_t *app, FILE *curFd, char *similarToId) {
 }
 
 /*	browse genre stations and create shared station
- *	@param piano handle
+ *	@param app handle
  */
-void BarStationFromGenre (BarApp_t *app, FILE *curFd) {
+void BarStationFromGenre (BarApp_t *app) {
 	PianoReturn_t pRet;
 	WaitressReturn_t wRet;
 	PianoGenreCategory_t *curCat;
@@ -504,7 +586,7 @@ void BarStationFromGenre (BarApp_t *app, FILE *curFd) {
 	}
 	/* select category or exit */
 	BarUiMsg (MSG_QUESTION, "Select category: ");
-	if (BarReadlineInt (&i, curFd) == 0) {
+	if (BarReadlineInt (&i, &app->input) == 0) {
 		return;
 	}
 	curCat = app->ph.genreStations;
@@ -522,7 +604,7 @@ void BarStationFromGenre (BarApp_t *app, FILE *curFd) {
 		curGenre = curGenre->next;
 	}
 	BarUiMsg (MSG_QUESTION, "Select genre: ");
-	if (BarReadlineInt (&i, curFd) == 0) {
+	if (BarReadlineInt (&i, &app->input) == 0) {
 		return;
 	}
 	curGenre = curCat->genres;
@@ -550,57 +632,34 @@ inline void BarUiPrintStation (PianoStation_t *station) {
  *	@param alternative station info (show real station for quickmix, e.g.)
  */
 inline void BarUiPrintSong (const BarSettings_t *settings,
-			    const PianoSong_t *song, const BarApp_t *app, const PianoStation_t *station) {
+		const PianoSong_t *song, const PianoStation_t *station) {
 	BarUiMsg (MSG_PLAYING, "\"%s\" by \"%s\" on \"%s\"%s%s%s%s\n",
 			song->title, song->artist, song->album,
 			(song->rating == PIANO_RATE_LOVE) ? " " : "",
 			(song->rating == PIANO_RATE_LOVE) ? settings->loveIcon : "",
 			station != NULL ? " @ " : "",
 			station != NULL ? station->name : "");
-
-}
-
-/* This will save the song to $HOME/Music/pianobarplus/artists/ARTIST/ALBUM/SONG.mp3 
-   and it will link the song to $HOME/Music/pianobarplus/stations/STATION/SONG.mp3 */
-inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station, const PianoSong_t *song) {
-  /* This "find" string and system call checks to see if we already have the song
-     If we do not have the song, we download it. We do nothing otherwise.
-     It is currently broken so it will always download the song */
-  char find[200];
-  sprintf(find, "find $HOME/Music/pianobarplus -name \"%s by %s.mp3\" > /dev/null 2> /dev/null", song->title, song->artist);
-  if (!system(find)) {
-    char downloadCommand[1000];
-    sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null", 
-	    song->artist, song->album, song->artist, song->album, song->title, song->audioUrl);
-
-    char makeStationCommand[200];
-    sprintf(makeStationCommand, "mkdir -p \"$HOME/Music/pianobarplus/stations/%s\" &>/dev/null",
-	    app->curStation->name);
-
-    char linkCommand[200];
-    sprintf(linkCommand, "ln -f \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/stations/%s\"",
-	    song->artist, song->album, song->title, app->curStation->name);
-
-    char totalCommand[2000];
-    sprintf(totalCommand, "%s && %s && %s", downloadCommand, makeStationCommand, linkCommand);
-    system(totalCommand);
-  }
 }
 
 /*	Print list of songs
  *	@param pianobar settings
  *	@param linked list of songs
+ *	@param artist/song filter string
  *	@return # of songs
  */
 size_t BarUiListSongs (const BarSettings_t *settings,
-		const PianoSong_t *song) {
+		const PianoSong_t *song, const char *filter) {
 	size_t i = 0;
 
 	while (song != NULL) {
-		BarUiMsg (MSG_LIST, "%2lu) %s - %s %s%s\n", i, song->artist,
-				song->title,
-				(song->rating == PIANO_RATE_LOVE) ? settings->loveIcon : "",
-				(song->rating == PIANO_RATE_BAN) ? settings->banIcon : "");
+		if (filter == NULL ||
+				(filter != NULL && (BarStrCaseStr (song->artist, filter) != NULL ||
+				BarStrCaseStr (song->title, filter) != NULL))) {
+			BarUiMsg (MSG_LIST, "%2lu) %s - %s %s%s\n", i, song->artist,
+					song->title,
+					(song->rating == PIANO_RATE_LOVE) ? settings->loveIcon : "",
+					(song->rating == PIANO_RATE_BAN) ? settings->banIcon : "");
+		}
 		song = song->next;
 		i++;
 	}
@@ -621,42 +680,12 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 		const struct audioPlayer *player, PianoStation_t *stations,
                 PianoReturn_t pRet, WaitressReturn_t wRet) {
 	pid_t chld;
-	char pipeBuf[1024];
 	int pipeFd[2];
 
 	if (settings->eventCmd == NULL) {
 		/* nothing to do... */
 		return;
 	}
-
-	/* prepare stdin content */
-	memset (pipeBuf, 0, sizeof (pipeBuf));
-	snprintf (pipeBuf, sizeof (pipeBuf),
-			"artist=%s\n"
-			"title=%s\n"
-			"album=%s\n"
-			"coverArt=%s\n"
-			"stationName=%s\n"
-			"pRet=%i\n"
-			"pRetStr=%s\n"
-			"wRet=%i\n"
-			"wRetStr=%s\n"
-			"songDuration=%lu\n"
-			"songPlayed=%lu\n"
-			"rating=%i\n",
-			curSong == NULL ? "" : curSong->artist,
-			curSong == NULL ? "" : curSong->title,
-			curSong == NULL ? "" : curSong->album,
-			curSong == NULL ? "" : curSong->coverArt,
-			curStation == NULL ? "" : curStation->name,
-			pRet,
-			PianoErrorToStr (pRet),
-			wRet,
-			WaitressErrorToStr (wRet),
-			player->songDuration,
-			player->songPlayed,
-			curSong == NULL ? PIANO_RATE_NONE : curSong->rating
-			);
 
 	if (pipe (pipeFd) == -1) {
 		BarUiMsg (MSG_ERR, "Cannot create eventcmd pipe. (%s)\n", strerror (errno));
@@ -676,8 +705,48 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 		BarUiMsg (MSG_ERR, "Cannot fork eventcmd. (%s)\n", strerror (errno));
 	} else {
 		/* parent */
-		int status;
+		int status, printfret;
+		char pipeBuf[1024];
+		PianoStation_t *songStation = NULL;
+
 		close (pipeFd[0]);
+
+		if (curSong != NULL && stations != NULL && curStation->isQuickMix) {
+			songStation = PianoFindStationById (stations, curSong->stationId);
+		}
+
+		printfret = snprintf (pipeBuf, sizeof (pipeBuf),
+				"artist=%s\n"
+				"title=%s\n"
+				"album=%s\n"
+				"coverArt=%s\n"
+				"stationName=%s\n"
+				"songStationName=%s\n"
+				"pRet=%i\n"
+				"pRetStr=%s\n"
+				"wRet=%i\n"
+				"wRetStr=%s\n"
+				"songDuration=%lu\n"
+				"songPlayed=%lu\n"
+				"rating=%i\n"
+				"detailUrl=%s\n",
+				curSong == NULL ? "" : curSong->artist,
+				curSong == NULL ? "" : curSong->title,
+				curSong == NULL ? "" : curSong->album,
+				curSong == NULL ? "" : curSong->coverArt,
+				curStation == NULL ? "" : curStation->name,
+				songStation == NULL ? "" : songStation->name,
+				pRet,
+				PianoErrorToStr (pRet),
+				wRet,
+				WaitressErrorToStr (wRet),
+				player->songDuration,
+				player->songPlayed,
+				curSong == NULL ? PIANO_RATE_NONE : curSong->rating,
+				curSong == NULL ? "" : curSong->detailUrl
+				);
+		assert (printfret < sizeof (pipeBuf));
+
 		write (pipeFd[1], pipeBuf, strlen (pipeBuf));
 
 		if (stations != NULL) {
@@ -693,8 +762,9 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 
 			for (size_t i = 0; i < stationCount; i++) {
 				const PianoStation_t *currStation = sortedStations[i];
-				snprintf (pipeBuf, sizeof (pipeBuf), "station%zd=%s\n", i,
+				printfret = snprintf (pipeBuf, sizeof (pipeBuf), "station%zd=%s\n", i,
 						currStation->name);
+				assert (printfret < sizeof (pipeBuf));
 				write (pipeFd[1], pipeBuf, strlen (pipeBuf));
 			}
 			free (sortedStations);
@@ -708,3 +778,33 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 		waitpid (chld, &status, 0);
 	}
 }
+
+/*	prepend song to history, must not be a list of songs as ->next is modified!
+ */
+void BarUiHistoryPrepend (BarApp_t *app, PianoSong_t *song) {
+	if (app->settings.history != 0) {
+		PianoSong_t *tmpSong;
+
+		song->next = app->songHistory;
+		app->songHistory = song;
+
+		/* limit history's length */
+		/* start with 1, so we're stopping at n-1 and have the
+		 * chance to set ->next = NULL */
+		unsigned int i = 1;
+		tmpSong = app->songHistory;
+		while (i < app->settings.history && tmpSong != NULL) {
+			tmpSong = tmpSong->next;
+			++i;
+		}
+		/* if too many songs in history... */
+		if (tmpSong != NULL) {
+			PianoSong_t *delSong = tmpSong->next;
+			tmpSong->next = NULL;
+			if (delSong != NULL) {
+				PianoDestroyPlaylist (delSong);
+			}
+		}
+	}
+}
+

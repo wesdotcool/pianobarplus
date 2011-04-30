@@ -30,9 +30,11 @@ THE SOFTWARE.
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
+#include <assert.h>
 
 #include "settings.h"
 #include "config.h"
+#include "ui_dispatch.h"
 
 #define streq(a, b) (strcmp (a, b) == 0)
 
@@ -47,7 +49,6 @@ void BarGetXdgConfigDir (const char *filename, char *retDir,
 		size_t retDirN) {
 	char *xdgConfigDir = NULL;
 
-	printf(filename);
 	if ((xdgConfigDir = getenv ("XDG_CONFIG_HOME")) != NULL &&
 			strlen (xdgConfigDir) > 0) {
 		/* special dir: $xdg_config_home */
@@ -56,7 +57,6 @@ void BarGetXdgConfigDir (const char *filename, char *retDir,
 		if ((xdgConfigDir = getenv ("HOME")) != NULL &&
 				strlen (xdgConfigDir) > 0) {
 			/* standard config dir: $home/.config */
-		        /* standard config for our setup is $HOME/.config/pianobar+/config */ 
 			snprintf (retDir, retDirN, "%s/.config/%s", xdgConfigDir,
 					filename);
 		} else {
@@ -85,7 +85,6 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->eventCmd);
 	free (settings->loveIcon);
 	free (settings->banIcon);
-	free(settings->banDelete);
 	memset (settings, 0, sizeof (*settings));
 }
 
@@ -96,24 +95,13 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 void BarSettingsRead (BarSettings_t *settings) {
 	char configfile[PATH_MAX], key[256], val[256];
 	FILE *configfd;
-	/* _must_ have same order as in BarKeyShortcutId_t */
-	static const char defaultKeys[] = {'?', '+', '-', 'a', 'c', 'd', 'e', 'g',
-			'h', 'i', 'j', 'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'x', '$',
-			'b', '(', ')',
-			};
-	static const char *shortcutFileKeys[] = {
-			"act_help", "act_songlove", "act_songban", "act_stationaddmusic",
-			"act_stationcreate", "act_stationdelete", "act_songexplain",
-			"act_stationaddbygenre", "act_history", "act_songinfo",
-			"act_addshared", "act_songmove", "act_songnext", "act_songpause",
-			"act_quit", "act_stationrename", "act_stationchange",
-			"act_songtired", "act_upcoming", "act_stationselectquickmix",
-			"act_debug", "act_bookmark", "act_voldown", "act_volup",
-			};
+
+	assert (sizeof (settings->keys) / sizeof (*settings->keys) ==
+			sizeof (dispatchActions) / sizeof (*dispatchActions));
 
 	/* apply defaults */
 	#ifdef ENABLE_FAAD
-	settings->audioFormat = PIANO_AF_MP3;
+	settings->audioFormat = PIANO_AF_AACPLUS;
 	#else
 		#ifdef ENABLE_MAD
 		settings->audioFormat = PIANO_AF_MP3;
@@ -122,9 +110,12 @@ void BarSettingsRead (BarSettings_t *settings) {
 	settings->history = 5;
 	settings->volume = 0;
 	settings->sortOrder = BAR_SORT_NAME_AZ;
-	memcpy (settings->keys, defaultKeys, sizeof (defaultKeys));
 	settings->loveIcon = strdup ("<3");
 	settings->banIcon = strdup ("</3");
+	for (size_t i = 0; i < BAR_KS_COUNT; i++) {
+		settings->keys[i] = dispatchActions[i].defaultKey;
+	}
+
 	BarGetXdgConfigDir (PACKAGE "/config", configfile, sizeof (configfile));
 	if ((configfd = fopen (configfile, "r")) == NULL) {
 		return;
@@ -147,15 +138,11 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->username = strdup (val);
 		} else if (streq ("password", key)) {
 			settings->password = strdup (val);
-		} else if(streq("banDelete", key)) {
-		  settings->banDelete = strdup(val);
-		} else if(streq("setFavoriteFormat", key)) {
-		  settings->setFavoriteFormat = strdup(val);
 		} else if (memcmp ("act_", key, 4) == 0) {
 			size_t i;
 			/* keyboard shortcuts */
 			for (i = 0; i < BAR_KS_COUNT; i++) {
-				if (streq (shortcutFileKeys[i], key)) {
+				if (streq (dispatchActions[i].configKey, key)) {
 					if (streq (val, "disabled")) {
 						settings->keys[i] = BAR_KS_DISABLED;
 					} else {

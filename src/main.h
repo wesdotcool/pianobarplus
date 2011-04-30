@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2008-2011
+Copyright (c) 2008-2010
 	Lars-Dominik Braun <lars@6xq.net>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -27,9 +27,10 @@ THE SOFTWARE.
 #include <piano.h>
 #include <waitress.h>
 
+#include <sys/select.h>
+
 #include "player.h"
 #include "settings.h"
-#include "ui_readline.h"
 
 typedef struct {
 	PianoHandle_t ph;
@@ -41,7 +42,10 @@ typedef struct {
 	PianoSong_t *songHistory;
 	PianoStation_t *curStation;
 	char doQuit;
-	BarReadlineFds_t input;
+	fd_set readSet;
+	int maxFd;
+	int selectFds[2];
+	FILE *ctlFd;
 } BarApp_t;
 
 #endif /* _MAIN_H */

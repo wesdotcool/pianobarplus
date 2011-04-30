@@ -35,8 +35,6 @@ THE SOFTWARE.
 #endif
 
 #include <ao/ao.h>
-/* required for freebsd */
-#include <sys/types.h>
 #include <pthread.h>
 
 #include <piano.h>

@@ -47,7 +47,7 @@ void BarGetXdgConfigDir (const char *filename, char *retDir,
 		size_t retDirN) {
 	char *xdgConfigDir = NULL;
 
-	printf(filename);
+	printf("%s\n", filename);
 	if ((xdgConfigDir = getenv ("XDG_CONFIG_HOME")) != NULL &&
 			strlen (xdgConfigDir) > 0) {
 		/* special dir: $xdg_config_home */
@@ -56,7 +56,7 @@ void BarGetXdgConfigDir (const char *filename, char *retDir,
 		if ((xdgConfigDir = getenv ("HOME")) != NULL &&
 				strlen (xdgConfigDir) > 0) {
 			/* standard config dir: $home/.config */
-		        /* standard config for our setup is $HOME/.config/pianobar+/config */ 
+		        /* standard config for our setup is $HOME/.config/pianobar+/config */
 			snprintf (retDir, retDirN, "%s/.config/%s", xdgConfigDir,
 					filename);
 		} else {
@@ -85,7 +85,8 @@ void BarSettingsDestroy (BarSettings_t *settings) {
 	free (settings->eventCmd);
 	free (settings->loveIcon);
 	free (settings->banIcon);
-	free(settings->banDelete);
+	free (settings->banDelete);
+	free (settings->setFavoriteFormat);
 	memset (settings, 0, sizeof (*settings));
 }
 
@@ -147,10 +148,13 @@ void BarSettingsRead (BarSettings_t *settings) {
 			settings->username = strdup (val);
 		} else if (streq ("password", key)) {
 			settings->password = strdup (val);
-		} else if(streq("banDelete", key)) {
+			/* Things new to pianobar++ */
+		} else if (streq("banDelete", key)) {
 		  settings->banDelete = strdup(val);
-		} else if(streq("setFavoriteFormat", key)) {
+		} else if (streq("setFavoriteFormat", key)) {
 		  settings->setFavoriteFormat = strdup(val);
+		} else if (streq("growl",key)) {
+		  settings->growl = atoi(strdup(val));
 		} else if (memcmp ("act_", key, 4) == 0) {
 			size_t i;
 			/* keyboard shortcuts */

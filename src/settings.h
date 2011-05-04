@@ -84,8 +84,12 @@ typedef struct {
 	char *eventCmd;
 	char *loveIcon;
         char *banIcon;
+
+  /* Things new in pianobar++ */
         char *banDelete;
         char *setFavoriteFormat;
+        int growl;
+
 } BarSettings_t;
 
 void BarSettingsInit (BarSettings_t *);

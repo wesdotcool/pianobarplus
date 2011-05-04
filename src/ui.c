@@ -26,17 +26,6 @@ THE SOFTWARE.
 #define _POSIX_C_SOURCE 1 /* fileno() */
 #define _BSD_SOURCE /* strdup() */
 
-/** These are colors for color printing **/
-#define COLORRED  "\x1b[1;31m"
-#define COLORBLUE  "\x1b[1;34m"
-#define COLORGREEN "\x1b[1;32m"
-#define COLORTEAL  "\x1b[1;36m"
-#define COLORPINK  "\x1b[1;35m"
-#define COLORYELLOW  "\x1b[1;33m"
-#define COLORGREY  "\x1b[1;37m"
-#define COLORDEFAULT  "\x1b[0m"
-
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -52,7 +41,6 @@ THE SOFTWARE.
 
 #include "ui.h"
 #include "ui_readline.h"
-#include "utils.h"
 
 typedef int (*BarSortFunc_t) (const void *, const void *);
 
@@ -65,7 +53,7 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 
 	switch (type) {
 		case MSG_INFO:
-   		        printf (ANSI_CLEAR_LINE "%s(i) ", COLORYELLOW);
+			printf (ANSI_CLEAR_LINE "(i) ");
 			break;
 
 		case MSG_PLAYING:
@@ -75,7 +63,7 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 		case MSG_TIME:
 			printf (ANSI_CLEAR_LINE "#   ");
 			break;
-
+		
 		case MSG_ERR:
 			printf (ANSI_CLEAR_LINE "/!\\ ");
 			break;
@@ -85,9 +73,9 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 			break;
 
 		case MSG_LIST:
-   		        printf (ANSI_CLEAR_LINE "%s\t", COLORTEAL);
+			printf (ANSI_CLEAR_LINE "\t");
 			break;
-
+	
 		default:
 			break;
 	}
@@ -96,8 +84,8 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 	va_end (fmtargs);
 
 	fflush (stdout);
-	printf("%s", COLORDEFAULT);
-        #undef ANSI_CLEAR_LINE
+
+	#undef ANSI_CLEAR_LINE
 }
 
 /*	prints human readable status message based on return value
@@ -524,7 +512,7 @@ void BarStationFromGenre (BarApp_t *app, FILE *curFd) {
 		curCat = curCat->next;
 		i--;
 	}
-
+	
 	/* print all available stations */
 	curGenre = curCat->genres;
 	i = 0;
@@ -563,8 +551,8 @@ inline void BarUiPrintStation (PianoStation_t *station) {
  */
 inline void BarUiPrintSong (const BarSettings_t *settings,
 			    const PianoSong_t *song, const BarApp_t *app, const PianoStation_t *station) {
-          BarUiMsg (MSG_PLAYING, "%s%s%s by %s%s%s on %s%s%s%s%s%s%s\n", COLORRED,
-   		    song->title, COLORDEFAULT, COLORBLUE, song->artist, COLORDEFAULT, COLORGREEN, song->album, COLORDEFAULT,
+	BarUiMsg (MSG_PLAYING, "\"%s\" by \"%s\" on \"%s\"%s%s%s%s\n",
+			song->title, song->artist, song->album,
 			(song->rating == PIANO_RATE_LOVE) ? " " : "",
 			(song->rating == PIANO_RATE_LOVE) ? settings->loveIcon : "",
 			station != NULL ? " @ " : "",
@@ -572,7 +560,7 @@ inline void BarUiPrintSong (const BarSettings_t *settings,
 
 }
 
-/* This will save the song to $HOME/Music/pianobarplus/artists/ARTIST/ALBUM/SONG.mp3
+/* This will save the song to $HOME/Music/pianobarplus/artists/ARTIST/ALBUM/SONG.mp3 
    and it will link the song to $HOME/Music/pianobarplus/stations/STATION/SONG.mp3 */
 inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station, const PianoSong_t *song) {
   /* This "find" string and system call checks to see if we already have the song
@@ -580,64 +568,23 @@ inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station,
      It is currently broken so it will always download the song */
   char find[200];
   sprintf(find, "find $HOME/Music/pianobarplus -name \"%s by %s.mp3\" > /dev/null 2> /dev/null", song->title, song->artist);
-  /* This will replace any '/' character in the song or artist names with a ':' character so it will save correctly */
-  char* songTitle = (char*) malloc(sizeof(char) * (strlen(song->title) + 1));
-  char* songArtist = (char*) malloc(sizeof(char) * (strlen(song->artist) + 1));
-  char* songAlbum = (char*) malloc(sizeof(char) * (strlen(song->album) + 1));
-  char* stationName = (char*) malloc(sizeof(char) * (strlen(app->curStation->name) + 1));
-  strcpy(songTitle,song->title);
-  strcpy(songArtist,song->artist);
-  strcpy(songAlbum,song->album);
-  strcpy(stationName,app->curStation->name);
-  replaceChars(songTitle, '/',':');
-  replaceChars(songArtist, '/',':');
-  replaceChars(songAlbum, '/',':');
-  replaceChars(stationName, '/',':');
-
   if (!system(find)) {
     char downloadCommand[1000];
-    sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null",
-	    songArtist, songAlbum, songArtist, songAlbum, songTitle, song->audioUrl);
+    sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null", 
+	    song->artist, song->album, song->artist, song->album, song->title, song->audioUrl);
 
     char makeStationCommand[200];
     sprintf(makeStationCommand, "mkdir -p \"$HOME/Music/pianobarplus/stations/%s\" &>/dev/null",
-	    stationName);
+	    app->curStation->name);
 
     char linkCommand[200];
     sprintf(linkCommand, "ln -f \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/stations/%s\"",
-	    songArtist, songAlbum, songTitle, stationName);
+	    song->artist, song->album, song->title, app->curStation->name);
 
     char totalCommand[2000];
     sprintf(totalCommand, "%s && %s && %s", downloadCommand, makeStationCommand, linkCommand);
     system(totalCommand);
   }
-
-
-  /* This checks if we have this song in the unknown album so we can remove it */
-  char statCommand[300];
-  sprintf(statCommand, "stat \"$HOME/Music/pianobarplus/artists/%s/unknown/%s\" >/dev/null 2>/dev/null",
-	  songArtist, songTitle);
-  /* If the song is in the artist's "unknown" folder, this if-block will rm it */
-  if (!system(statCommand)) {
-    char rmCommand[300];
-    sprintf(rmCommand, "rm \"$HOME/Music/pianobarplus/artists/%s/unknown/%s.mp3\"",
-	    songArtist, songTitle);
-    system(rmCommand);
-  }
-
-  free(songTitle);
-  free(songArtist);
-  free(songAlbum);
-  free(stationName);
-}
-
-inline void PlusBarGrowl (const char *event, const PianoSong_t *song) {
-  if (strcmp(event, "songstart") == 0) {
-    char growlCommand[200];
-    sprintf(growlCommand, "growlnotify -t \"PianoBar++ Is Now Playing:\" -m \"%s by %s\"", song->title, song->artist);
-    system(growlCommand);
-  }
-
 }
 
 /*	Print list of songs
@@ -677,19 +624,10 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 	char pipeBuf[1024];
 	int pipeFd[2];
 
-	/* The current implementation of growl is simple and
-	   may change. Currently if the growl flag is on, then
-	   pianobar will notify you of everything */
-	if (settings->growl) {
-	  PlusBarGrowl(type, curSong);
-	}
-
-
 	if (settings->eventCmd == NULL) {
 		/* nothing to do... */
 		return;
 	}
-
 
 	/* prepare stdin content */
 	memset (pipeBuf, 0, sizeof (pipeBuf));
@@ -764,7 +702,7 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 			const char *msg = "stationCount=0\n";
 			write (pipeFd[1], msg, strlen (msg));
 		}
-
+	
 		close (pipeFd[1]);
 		/* wait to get rid of the zombie */
 		waitpid (chld, &status, 0);

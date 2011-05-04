@@ -1,5 +1,5 @@
 pianobar
-============
+========
 
 pianobar is a console client for the personalized web radio pandora
 (http://www.pandora.com).
@@ -11,31 +11,13 @@ pianobar is a console client for the personalized web radio pandora
 - last.fm scrobbling support (external application)
 - proxy support for listeners outside the USA
 
-The original vanilla pianobar sourcecode can be downloaded at
+The sourcecode can be downloaded at
 http://github.com/PromyLOPh/pianobar/ or http://6xq.net/0017
 
 pianobarplus
-<<<<<<< HEAD
 ========
-=======
-============
->>>>>>> a579684c7953bac1a9391edc6fa52bf926112c8f
 
 Adds the ability to download music for offline listening...
 
 DISCLAIMER:
 I in no way encourage Music Piracy. I would hope that you use this in a good way for listening to music when you have no connection, not for pirating music. I am not responsible if the RIAA shows up at your door or if your Pandora account suddenly stops working, or any other damages caused by using this application. Please, just use common sense and there won't be a problem...
-<<<<<<< HEAD
-=======
-
-pianobar++
-============
-
-Adds additional functionality to pianbarplus, including better organization of the downloaded music library and support for colored terminals.
-
-DISCLAIMER:
-We also in no way encourage Music Piracy. We echo the disclaimer above. The
-reason we created this was frustration from lack of certain user interface
-and organizational features in pianobarplus, not to facilitate music piracy.
-We like hacking, and thought we could make it better. That is all. 
->>>>>>> a579684c7953bac1a9391edc6fa52bf926112c8f

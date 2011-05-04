@@ -53,8 +53,4 @@ void BarUiStartEventCmd (const BarSettings_t *, const char *,
 int BarUiPianoCall (BarApp_t * const, PianoRequestType_t,
 		void *, PianoReturn_t *, WaitressReturn_t *);
 
-/* This method needs to be generalized, but that will take significant code refactorization.
-   For now it just growls the song that is playing */
-void PlusBarGrowl (const char* event, const PianoSong_t* song);
-
 #endif /* _UI_H */

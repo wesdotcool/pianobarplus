@@ -26,6 +26,19 @@ THE SOFTWARE.
 #define _POSIX_C_SOURCE 1 /* fileno() */
 #define _BSD_SOURCE /* strdup() */
 
+
+/** These are colors for color printing **/
+#define COLORRED  "\x1b[1;31m"
+#define COLORBLUE  "\x1b[1;34m"
+#define COLORGREEN "\x1b[1;32m"
+#define COLORTEAL  "\x1b[1;36m"
+#define COLORPINK  "\x1b[1;35m"
+#define COLORYELLOW  "\x1b[1;33m"
+#define COLORGREY  "\x1b[1;37m"
+#define COLORDEFAULT  "\x1b[0m"
+
+
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -53,7 +66,7 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 
 	switch (type) {
 		case MSG_INFO:
-			printf (ANSI_CLEAR_LINE "(i) ");
+			printf (ANSI_CLEAR_LINE "%s(i) ", COLORYELLOW);
 			break;
 
 		case MSG_PLAYING:
@@ -63,7 +76,7 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 		case MSG_TIME:
 			printf (ANSI_CLEAR_LINE "#   ");
 			break;
-		
+
 		case MSG_ERR:
 			printf (ANSI_CLEAR_LINE "/!\\ ");
 			break;
@@ -73,9 +86,9 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 			break;
 
 		case MSG_LIST:
-			printf (ANSI_CLEAR_LINE "\t");
+			printf (ANSI_CLEAR_LINE "%s\t", COLORTEAL);
 			break;
-	
+
 		default:
 			break;
 	}
@@ -84,7 +97,7 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 	va_end (fmtargs);
 
 	fflush (stdout);
-
+	printf("%s", COLORDEFAULT);
 	#undef ANSI_CLEAR_LINE
 }
 
@@ -512,7 +525,7 @@ void BarStationFromGenre (BarApp_t *app, FILE *curFd) {
 		curCat = curCat->next;
 		i--;
 	}
-	
+
 	/* print all available stations */
 	curGenre = curCat->genres;
 	i = 0;
@@ -551,8 +564,8 @@ inline void BarUiPrintStation (PianoStation_t *station) {
  */
 inline void BarUiPrintSong (const BarSettings_t *settings,
 			    const PianoSong_t *song, const BarApp_t *app, const PianoStation_t *station) {
-	BarUiMsg (MSG_PLAYING, "\"%s\" by \"%s\" on \"%s\"%s%s%s%s\n",
-			song->title, song->artist, song->album,
+          BarUiMsg (MSG_PLAYING, "%s%s%s by %s%s%s on %s%s%s%s%s%s%s\n", COLORRED,
+   		    song->title, COLORDEFAULT, COLORBLUE, song->artist, COLORDEFAULT, COLORGREEN, song->album, COLORDEFAULT,
 			(song->rating == PIANO_RATE_LOVE) ? " " : "",
 			(song->rating == PIANO_RATE_LOVE) ? settings->loveIcon : "",
 			station != NULL ? " @ " : "",
@@ -560,7 +573,7 @@ inline void BarUiPrintSong (const BarSettings_t *settings,
 
 }
 
-/* This will save the song to $HOME/Music/pianobarplus/artists/ARTIST/ALBUM/SONG.mp3 
+/* This will save the song to $HOME/Music/pianobarplus/artists/ARTIST/ALBUM/SONG.mp3
    and it will link the song to $HOME/Music/pianobarplus/stations/STATION/SONG.mp3 */
 inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station, const PianoSong_t *song) {
   /* This "find" string and system call checks to see if we already have the song
@@ -570,7 +583,7 @@ inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station,
   sprintf(find, "find $HOME/Music/pianobarplus -name \"%s by %s.mp3\" > /dev/null 2> /dev/null", song->title, song->artist);
   if (!system(find)) {
     char downloadCommand[1000];
-    sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null", 
+    sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null",
 	    song->artist, song->album, song->artist, song->album, song->title, song->audioUrl);
 
     char makeStationCommand[200];
@@ -702,7 +715,7 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 			const char *msg = "stationCount=0\n";
 			write (pipeFd[1], msg, strlen (msg));
 		}
-	
+
 		close (pipeFd[1]);
 		/* wait to get rid of the zombie */
 		waitpid (chld, &status, 0);

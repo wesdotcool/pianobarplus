@@ -579,22 +579,22 @@ inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station,
   /* This "find" string and system call checks to see if we already have the song
      If we do not have the song, we download it. We do nothing otherwise.
      It is currently broken so it will always download the song */
-  char find[200];
+  char find[500];
   sprintf(find, "find $HOME/Music/pianobarplus -name \"%s by %s.mp3\" > /dev/null 2> /dev/null", song->title, song->artist);
   if (!system(find)) {
-    char downloadCommand[1000];
+    char downloadCommand[1500];
     sprintf(downloadCommand,"mkdir -p \"$HOME/Music/pianobarplus/artists/%s/%s\" && wget -q -b -O \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"%s\" &>/dev/null",
 	    song->artist, song->album, song->artist, song->album, song->title, song->audioUrl);
 
-    char makeStationCommand[200];
+    char makeStationCommand[500];
     sprintf(makeStationCommand, "mkdir -p \"$HOME/Music/pianobarplus/stations/%s\" &>/dev/null",
 	    app->curStation->name);
 
-    char linkCommand[200];
+    char linkCommand[500];
     sprintf(linkCommand, "ln -f \"$HOME/Music/pianobarplus/artists/%s/%s/%s.mp3\" \"$HOME/Music/pianobarplus/stations/%s\"",
 	    song->artist, song->album, song->title, app->curStation->name);
 
-    char totalCommand[2000];
+    char totalCommand[2500];
     sprintf(totalCommand, "%s && %s && %s", downloadCommand, makeStationCommand, linkCommand);
     system(totalCommand);
   }

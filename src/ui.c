@@ -26,6 +26,7 @@ THE SOFTWARE.
 #define _POSIX_C_SOURCE 1 /* fileno() */
 #define _BSD_SOURCE /* strdup() */
 
+
 /** These are colors for color printing **/
 #define COLORRED  "\x1b[1;31m"
 #define COLORBLUE  "\x1b[1;34m"
@@ -35,6 +36,7 @@ THE SOFTWARE.
 #define COLORYELLOW  "\x1b[1;33m"
 #define COLORGREY  "\x1b[1;37m"
 #define COLORDEFAULT  "\x1b[0m"  /* This is black */
+
 
 
 #include <stdio.h>
@@ -52,7 +54,6 @@ THE SOFTWARE.
 
 #include "ui.h"
 #include "ui_readline.h"
-#include "utils.h"
 
 typedef int (*BarSortFunc_t) (const void *, const void *);
 
@@ -65,7 +66,7 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 
 	switch (type) {
 		case MSG_INFO:
-   		        printf (ANSI_CLEAR_LINE "%s(i) ", COLORYELLOW);
+			printf (ANSI_CLEAR_LINE "%s(i) ", COLORYELLOW);
 			break;
 
 		case MSG_PLAYING:
@@ -75,7 +76,7 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 		case MSG_TIME:
 			printf (ANSI_CLEAR_LINE "#   ");
 			break;
-		
+
 		case MSG_ERR:
 			printf (ANSI_CLEAR_LINE "/!\\ ");
 			break;
@@ -85,19 +86,19 @@ inline void BarUiMsg (uiMsg_t type, const char *format, ...) {
 			break;
 
 		case MSG_LIST:
-   		        printf (ANSI_CLEAR_LINE "%s\t", COLORTEAL);
+			printf (ANSI_CLEAR_LINE "%s\t", COLORTEAL);
 			break;
-	
+
 		default:
 			break;
 	}
 	va_start (fmtargs, format);
 	vprintf (format, fmtargs);
 	va_end (fmtargs);
-	
+
 	fflush (stdout);
 	printf("%s", COLORDEFAULT);
-        #undef ANSI_CLEAR_LINE
+	#undef ANSI_CLEAR_LINE
 }
 
 /*	prints human readable status message based on return value
@@ -524,7 +525,7 @@ void BarStationFromGenre (BarApp_t *app, FILE *curFd) {
 		curCat = curCat->next;
 		i--;
 	}
-	
+
 	/* print all available stations */
 	curGenre = curCat->genres;
 	i = 0;
@@ -572,13 +573,13 @@ inline void BarUiPrintSong (const BarSettings_t *settings,
 
 }
 
-/* This will save the song to $HOME/Music/pianobarplus/artists/ARTIST/ALBUM/SONG.mp3 
+/* This will save the song to $HOME/Music/pianobarplus/artists/ARTIST/ALBUM/SONG.mp3
    and it will link the song to $HOME/Music/pianobarplus/stations/STATION/SONG.mp3 */
 inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station, const PianoSong_t *song) {
   /* This "find" string and system call checks to see if we already have the song
      If we do not have the song, we download it. We do nothing otherwise.
      It is currently broken so it will always download the song */
-  char find[200];
+  char find[500];
   sprintf(find, "find $HOME/Music/pianobarplus -name \"%s by %s.mp3\" > /dev/null 2> /dev/null", song->title, song->artist);
 
   /* This will replace any '/' character in the song or artist names with a ':' character so it will save correctly */
@@ -676,21 +677,12 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 	pid_t chld;
 	char pipeBuf[1024];
 	int pipeFd[2];
-	
-	/* The current implementation of growl is simple and
-	   may change. Currently if the growl flag is on, then
-	   pianobar will notify you of everything */
-	if (settings->growl) {
-	  PlusBarGrowl(type, curSong);
-	}
-
 
 	if (settings->eventCmd == NULL) {
 		/* nothing to do... */
 		return;
 	}
-	
-	
+
 	/* prepare stdin content */
 	memset (pipeBuf, 0, sizeof (pipeBuf));
 	snprintf (pipeBuf, sizeof (pipeBuf),
@@ -764,7 +756,7 @@ void BarUiStartEventCmd (const BarSettings_t *settings, const char *type,
 			const char *msg = "stationCount=0\n";
 			write (pipeFd[1], msg, strlen (msg));
 		}
-	
+
 		close (pipeFd[1]);
 		/* wait to get rid of the zombie */
 		waitpid (chld, &status, 0);

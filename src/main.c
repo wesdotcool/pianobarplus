@@ -428,7 +428,6 @@ int main (int argc, char **argv) {
 	BarSettingsInit (&app.settings);
 	BarSettingsRead (&app.settings);
 
-	BarUiMsg (MSG_NONE, "Welcome to " PACKAGE " (" PIANO_PROTOCOL_VERSION ")! ");
 	if (app.settings.keys[BAR_KS_HELP] == BAR_KS_DISABLED) {
 		BarUiMsg (MSG_NONE, "\n");
 	} else {

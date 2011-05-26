@@ -591,10 +591,6 @@ inline void PlusBarSaveSong (const BarApp_t *app, const PianoStation_t *station,
   strcpy(songArtist,song->artist);
   strcpy(songAlbum,song->album);
   strcpy(stationName,app->curStation->name);
-  replaceChars(songTitle, '/',':');
-  replaceChars(songArtist, '/',':');
-  replaceChars(songAlbum, '/',':');
-  replaceChars(stationName, '/',':');
 
   //There should be some sort of check to see if we already have the song
   char downloadCommand[1000];
